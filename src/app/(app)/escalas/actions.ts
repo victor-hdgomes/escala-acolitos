@@ -16,7 +16,11 @@ import {
   generateMonthEvents,
   generateNovenaEvents,
 } from "@/lib/schedule/generate";
-import { loadPersonStats, loadScheduleDetail } from "@/lib/schedule/queries";
+import {
+  loadBusyDaysFromOtherSchedules,
+  loadPersonStats,
+  loadScheduleDetail,
+} from "@/lib/schedule/queries";
 import { autoFillEvent, rankCandidates } from "@/lib/schedule/suggest";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -33,6 +37,9 @@ export async function createScheduleAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const ctx = await requireManager();
+
+  const kind = String(formData.get("kind") || "monthly");
+  if (kind === "novena") return createNovenaSchedule(ctx, formData);
 
   const parsed = z
     .object({
@@ -56,6 +63,7 @@ export async function createScheduleAction(
       parish_id: ctx.parish.id,
       title: `Escala Mensal | ${monthLabel(monthIso)}`,
       month: monthIso,
+      kind: "monthly",
       status: "collecting",
       availability_deadline: parsed.data.deadline
         ? deadlineToUtc(parsed.data.deadline, ctx.parish.timezone)
@@ -91,7 +99,95 @@ export async function createScheduleAction(
     action: "schedule.create",
     entity: "schedules",
     entityId: schedule.id,
-    payload: { month: monthIso },
+    payload: { month: monthIso, kind: "monthly" },
+  });
+
+  redirect(`/escalas/${schedule.id}`);
+}
+
+/**
+ * Escala só da novena, separada da do mês.
+ *
+ * Nasce com os dias já criados e com link próprio: é uma devoção com data e
+ * vagas próprias, que o grupo trata como outra coisa. O mês da escala vem do
+ * primeiro dia — uma novena que atravessa a virada continua listada no mês em
+ * que começou, que é como as pessoas se referem a ela.
+ */
+async function createNovenaSchedule(
+  ctx: Awaited<ReturnType<typeof requireManager>>,
+  formData: FormData,
+): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      title: z.string().trim().min(3, "Dê um nome à novena."),
+      locationId: z.string().uuid("Escolha o local."),
+      firstDay: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Escolha o primeiro dia."),
+      time: z.string().regex(/^\d{2}:\d{2}$/, "Horário inválido."),
+      days: z.coerce.number().int().min(1).max(31),
+      slots: z.coerce.number().int().min(1).max(12),
+      signupMode: z.enum(["availability", "direct"]),
+      deadline: z.string().optional(),
+    })
+    .safeParse({
+      title: formData.get("title"),
+      locationId: formData.get("locationId"),
+      firstDay: formData.get("firstDay"),
+      time: formData.get("time"),
+      days: formData.get("days") || 9,
+      slots: formData.get("slots") || 2,
+      signupMode: formData.get("signupMode") || "direct",
+      deadline: formData.get("deadline") || undefined,
+    });
+  if (!parsed.success) return fail(parsed.error.issues[0].message);
+
+  const [h, min] = parsed.data.time.split(":").map(Number);
+  const drafts = generateNovenaEvents({
+    title: parsed.data.title,
+    locationId: parsed.data.locationId,
+    firstDay: parsed.data.firstDay,
+    hour: h,
+    minute: min,
+    slots: parsed.data.slots,
+    timeZone: ctx.parish.timezone,
+    days: parsed.data.days,
+  }).map((d) => ({ ...d, signup_mode: parsed.data.signupMode }));
+
+  const monthIso = `${parsed.data.firstDay.slice(0, 7)}-01`;
+  const supabase = await createClient();
+
+  const { data: schedule, error } = await supabase
+    .from("schedules")
+    .insert({
+      parish_id: ctx.parish.id,
+      title: parsed.data.title,
+      month: monthIso,
+      kind: "novena",
+      status: "collecting",
+      availability_deadline: parsed.data.deadline
+        ? deadlineToUtc(parsed.data.deadline, ctx.parish.timezone)
+        : null,
+      created_by: ctx.userId,
+    })
+    .select("id")
+    .single();
+  if (error || !schedule) return fail("Não foi possível criar a escala.");
+
+  const { error: eventsError } = await supabase
+    .from("events")
+    .insert(drafts.map((d) => ({ ...d, schedule_id: schedule.id })));
+  if (eventsError) {
+    // Escala sem dias não serve para nada; melhor não deixar o resto.
+    await supabase.from("schedules").delete().eq("id", schedule.id);
+    return fail("Não foi possível criar os dias da novena.");
+  }
+
+  await logAudit({
+    parishId: ctx.parish.id,
+    actorUserId: ctx.userId,
+    action: "schedule.create",
+    entity: "schedules",
+    entityId: schedule.id,
+    payload: { kind: "novena", days: parsed.data.days },
   });
 
   redirect(`/escalas/${schedule.id}`);
@@ -392,6 +488,16 @@ export async function autoFillEventAction(
       .filter((id): id is string => !!id),
   );
 
+  // Outras escalas da paróquia podem ocupar a mesma pessoa no mesmo dia —
+  // é o caso da novena com escala própria.
+  const busyByDay = await loadBusyDaysFromOtherSchedules(
+    admin,
+    ctx.parish.id,
+    scheduleId,
+    detail.timezone,
+    { from: event.starts_at, to: event.starts_at },
+  );
+
   const suggestions = rankCandidates({
     people: (peopleRows ?? []).map((p) => ({
       id: p.id,
@@ -403,6 +509,7 @@ export async function autoFillEventAction(
     statsById,
     availableIds: new Set(event.availablePeople.map((p) => p.id)),
     sameDayIds,
+    otherScheduleDayIds: new Set(day ? (busyByDay[day.key] ?? []) : []),
     eventPersonIds: new Set(
       event.slotsView.map((s) => s.person?.id).filter((id): id is string => !!id),
     ),

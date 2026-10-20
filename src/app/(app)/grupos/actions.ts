@@ -9,6 +9,7 @@ import { fail, ok, type ActionResult } from "@/lib/action-result";
 import {
   ACTIVE_PARISH_COOKIE,
   getSessionContext,
+  isSuperadmin,
   requireAdmin,
   requireSession,
   ROLE_LABEL,
@@ -47,6 +48,14 @@ export async function createParishAction(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) return fail("Faça login primeiro.");
+
+  // A criação roda com service role (o grupo e o membership de admin precisam
+  // nascer juntos), então o RLS não protege nada aqui — esta é a checagem.
+  if (!(await isSuperadmin(user.id))) {
+    return fail(
+      "Só o administrador da instalação cria grupos. Peça um link de convite.",
+    );
+  }
 
   const parsed = z
     .object({

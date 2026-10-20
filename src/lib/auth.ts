@@ -171,3 +171,19 @@ export async function requireAdmin(): Promise<SessionContext> {
 export function canManage(ctx: SessionContext): boolean {
   return ctx.role === "admin" || ctx.role === "coordinator";
 }
+
+/**
+ * Dono da instalação. Consultado pelo id porque as ações que dependem disto
+ * rodam antes de haver contexto de grupo — criar o primeiro grupo, por
+ * exemplo. Lê com service role: a policy de `profiles` só deixa cada um ler
+ * a própria linha, o que aqui basta, mas o id vem do servidor de qualquer forma.
+ */
+export async function isSuperadmin(userId: string): Promise<boolean> {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("is_superadmin")
+    .eq("id", userId)
+    .maybeSingle();
+  return data?.is_superadmin ?? false;
+}

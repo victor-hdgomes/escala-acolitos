@@ -51,7 +51,9 @@ export function SwapView({
     () => [...candidates, ...others].find((p) => p.isMe) ?? null,
   );
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  const [showAll, setShowAll] = React.useState(false);
+  // Sem candidatos não há o que escolher: já abre com o grupo inteiro, senão
+  // o seletor aparece vazio justamente na tela mais urgente do app.
+  const [showAll, setShowAll] = React.useState(candidates.length === 0);
   const [pending, startTransition] = React.useTransition();
 
   const closed = status !== "open" || isPast;
@@ -151,10 +153,13 @@ export function SwapView({
         </CardContent>
       </Card>
 
-      {!closed ? (
+      {!closed && candidates.length > 0 ? (
         <button
           className="mt-4 text-center text-xs text-muted-foreground underline underline-offset-4"
-          onClick={() => setShowAll((v) => !v)}
+          onClick={() => {
+            setShowAll((v) => !v);
+            setPerson(null);
+          }}
         >
           {showAll
             ? "Mostrar só quem marcou disponibilidade"
@@ -168,6 +173,13 @@ export function SwapView({
         onChange={setPerson}
         open={pickerOpen}
         onOpenChange={setPickerOpen}
+        title="Quem vai assumir?"
+        description={
+          showAll
+            ? "Qualquer pessoa do grupo pode assumir esta vaga."
+            : "Quem marcou disponibilidade para este horário."
+        }
+        emptyMessage="Nenhum nome encontrado."
       />
     </div>
   );

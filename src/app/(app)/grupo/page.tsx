@@ -4,7 +4,11 @@ import { GeneralPanel } from "@/components/organisms/group/general-panel";
 import { LocationsPanel } from "@/components/organisms/group/locations-panel";
 import { MembersPanel } from "@/components/organisms/group/members-panel";
 import { TemplatesPanel } from "@/components/organisms/group/templates-panel";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ScrollTabsList,
+  ScrollTabsTrigger,
+} from "@/components/molecules/scroll-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { requireAdmin } from "@/lib/auth";
 import type { Invite, Location, MassTemplate, Person, Role } from "@/lib/db/types";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -90,12 +94,12 @@ export default async function GroupPage() {
       </header>
 
       <Tabs defaultValue="members">
-        <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="members">Membros</TabsTrigger>
-          <TabsTrigger value="locations">Locais</TabsTrigger>
-          <TabsTrigger value="templates">Grade</TabsTrigger>
-          <TabsTrigger value="general">Geral</TabsTrigger>
-        </TabsList>
+        <ScrollTabsList>
+          <ScrollTabsTrigger value="members">Membros</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="locations">Locais</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="templates">Grade</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="general">Geral</ScrollTabsTrigger>
+        </ScrollTabsList>
 
         <TabsContent value="members" className="mt-4">
           <MembersPanel

@@ -63,7 +63,7 @@ pela interface — quem cria entra como administrador.
 
 | Papel | O que faz |
 | --- | --- |
-| **Administrador** | Tudo: grupo, membros, papéis, convites, locais, grade, escalas |
+| **Administrador** | Tudo dentro do grupo: membros, papéis, convites, locais, grade, escalas |
 | **Coordenador** | Cria e monta escalas, gerencia a lista de acólitos |
 | **Acólito** | Vê as próprias missas e pede substituição |
 
@@ -73,7 +73,28 @@ telas dos outros sem trocar de conta — sem perder permissão de verdade.
 Uma conta participa de **vários grupos** com papel diferente em cada um; o
 seletor fica no topo da barra lateral (e no menu "Mais", no celular).
 
+Acima dos três há o **superadmin**, o dono da instalação (`profiles.is_superadmin`):
+enxerga e administra todos os grupos e é o único que cria grupos novos. Não há
+tela que conceda esse papel — ele é marcado no banco, de propósito. Quem entra
+por convite nunca consegue abrir um grupo próprio.
+
 ---
+
+## Tipos de escala
+
+| Tipo | Quando usar |
+| --- | --- |
+| **Mensal** | As missas do mês, geradas da grade semanal |
+| **Novena** | Dias seguidos de uma devoção, com link e prazo próprios |
+
+A novena pode viver dentro da escala do mês (aba **Celebrações → Novena**) ou
+ter escala própria (**Nova escala → Novena**). Com escala própria, o mês sai
+sem ela e as duas circulam no grupo como mensagens separadas — que é como o
+ministério já trata as duas coisas.
+
+Quando duas escalas convivem no mesmo mês, a montagem avisa se a pessoa já
+está escalada naquele dia **na outra escala**: sem isso, o app sugeriria a
+mesma pessoa para a missa das 19h30 e para a novena das 19h30 do mesmo dia.
 
 ## O fluxo
 

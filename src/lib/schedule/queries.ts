@@ -288,6 +288,62 @@ export async function loadPersonStats(
   return { statsById, byLocation };
 }
 
+/**
+ * Quem já está escalado, no mesmo dia, em OUTRAS escalas da paróquia.
+ *
+ * Desde que a novena pode ter escala própria, duas escalas convivem no mesmo
+ * mês — e sem isto o app sugeriria tranquilamente a mesma pessoa para a missa
+ * das 19h30 e para a novena das 19h30 do mesmo dia.
+ *
+ * A busca é limitada à janela de datas da escala em montagem; o histórico
+ * inteiro não interessa aqui.
+ */
+export async function loadBusyDaysFromOtherSchedules(
+  db: Db,
+  parishId: string,
+  scheduleId: string,
+  timezone: string,
+  range: { from: string; to: string } | null,
+): Promise<Record<string, string[]>> {
+  if (!range) return {};
+
+  const { data: schedules } = await db
+    .from("schedules")
+    .select("id")
+    .eq("parish_id", parishId)
+    .neq("id", scheduleId);
+  const scheduleIds = (schedules ?? []).map((s) => s.id);
+  if (!scheduleIds.length) return {};
+
+  const { data: events } = await db
+    .from("events")
+    .select("id, starts_at")
+    .in("schedule_id", scheduleIds)
+    .gte("starts_at", range.from)
+    .lte("starts_at", range.to);
+  if (!events?.length) return {};
+
+  const { data: assignments } = await db
+    .from("assignments")
+    .select("event_id, person_id")
+    .in(
+      "event_id",
+      events.map((e) => e.id),
+    );
+  if (!assignments?.length) return {};
+
+  const dayByEvent = new Map(
+    events.map((e) => [e.id, dayKey(e.starts_at, timezone)]),
+  );
+  const out: Record<string, string[]> = {};
+  for (const a of assignments) {
+    const day = dayByEvent.get(a.event_id);
+    if (!day) continue;
+    (out[day] ??= []).push(a.person_id);
+  }
+  return out;
+}
+
 /** Lista de acólitos ativos da paróquia, em ordem alfabética. */
 export async function loadPeople(db: Db, parishId: string): Promise<Person[]> {
   const { data } = await db

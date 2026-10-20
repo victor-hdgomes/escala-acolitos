@@ -4,11 +4,12 @@ import { CalendarPlus, ChevronRight } from "lucide-react";
 
 import { NewScheduleDialog } from "@/components/organisms/schedules/new-schedule-dialog";
 import { ScheduleStatusBadge } from "@/components/organisms/schedules/status-badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { requireManager } from "@/lib/auth";
 import { formatFullDate, monthLabel } from "@/lib/date";
-import type { Schedule } from "@/lib/db/types";
+import type { Location, Schedule } from "@/lib/db/types";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = { title: "Escalas" };
@@ -46,11 +47,19 @@ export default async function SchedulesPage() {
     if (sid) assignCount.set(sid, (assignCount.get(sid) ?? 0) + 1);
   }
 
-  const hasTemplates = await admin
-    .from("mass_templates")
-    .select("id", { count: "exact", head: true })
-    .eq("parish_id", ctx.parish.id)
-    .eq("active", true);
+  const [hasTemplates, { data: locations }] = await Promise.all([
+    admin
+      .from("mass_templates")
+      .select("id", { count: "exact", head: true })
+      .eq("parish_id", ctx.parish.id)
+      .eq("active", true),
+    admin
+      .from("locations")
+      .select("*")
+      .eq("parish_id", ctx.parish.id)
+      .eq("active", true)
+      .order("sort_order", { ascending: true }),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -64,6 +73,13 @@ export default async function SchedulesPage() {
         <NewScheduleDialog
           hasTemplates={(hasTemplates.count ?? 0) > 0}
           timezone={ctx.parish.timezone}
+          locations={((locations ?? []) as Location[]).map((l) => ({
+            id: l.id,
+            name: l.name,
+            short_name: l.short_name,
+            color: l.color,
+            sort_order: l.sort_order,
+          }))}
         />
       </header>
 
@@ -101,11 +117,22 @@ export default async function SchedulesPage() {
             >
               <Link href={`/escalas/${s.id}`}>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="flex items-center gap-2 truncate text-sm font-medium">
-                    {monthLabel(s.month)}
+                  <p className="flex min-w-0 items-center gap-2 text-sm font-medium">
+                    <span className="truncate">
+                      {s.kind === "monthly" ? monthLabel(s.month) : s.title}
+                    </span>
                     <ScheduleStatusBadge status={s.status} />
+                    {s.kind !== "monthly" ? (
+                      <Badge
+                        variant="secondary"
+                        className="shrink-0 bg-[color:var(--color-novena)]/15 text-[color:var(--color-novena)]"
+                      >
+                        {s.kind === "novena" ? "novena" : "especial"}
+                      </Badge>
+                    ) : null}
                   </p>
                   <p className="truncate text-xs text-muted-foreground">
+                    {s.kind !== "monthly" ? `${monthLabel(s.month)} · ` : ""}
                     {total} {total === 1 ? "celebração" : "celebrações"} ·{" "}
                     {filled} {filled === 1 ? "escalação" : "escalações"}
                     {s.availability_deadline

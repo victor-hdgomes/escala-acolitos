@@ -6,7 +6,12 @@ import { requireManager } from "@/lib/auth";
 import { monthLabel } from "@/lib/date";
 import type { Location } from "@/lib/db/types";
 import { appUrl } from "@/lib/public-access";
-import { loadPersonStats, loadScheduleDetail, toLite } from "@/lib/schedule/queries";
+import {
+  loadBusyDaysFromOtherSchedules,
+  loadPersonStats,
+  loadScheduleDetail,
+  toLite,
+} from "@/lib/schedule/queries";
 import type { PersonStats } from "@/lib/schedule/suggest";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -24,8 +29,20 @@ export default async function ScheduleDetailPage({
   const detail = await loadScheduleDetail(admin, id, { withAvailability: true });
   if (!detail || detail.schedule.parish_id !== ctx.parish.id) notFound();
 
-  const [{ data: people }, { data: locations }, { statsById, byLocation }] =
-    await Promise.all([
+  const allEvents = detail.days.flatMap((d) => d.events);
+  const range = allEvents.length
+    ? {
+        from: allEvents[0].starts_at,
+        to: allEvents[allEvents.length - 1].starts_at,
+      }
+    : null;
+
+  const [
+    { data: people },
+    { data: locations },
+    { statsById, byLocation },
+    busyByDay,
+  ] = await Promise.all([
       admin
         .from("people")
         .select("*")
@@ -37,6 +54,13 @@ export default async function ScheduleDetailPage({
         .eq("parish_id", ctx.parish.id)
         .order("sort_order", { ascending: true }),
       loadPersonStats(admin, ctx.parish.id, id),
+      loadBusyDaysFromOtherSchedules(
+        admin,
+        ctx.parish.id,
+        id,
+        detail.timezone,
+        range,
+      ),
     ]);
 
   const stats: Record<string, PersonStats> = {};
@@ -61,6 +85,7 @@ export default async function ScheduleDetailPage({
       }))}
       stats={stats}
       locationCounts={locationCounts}
+      busyByDay={busyByDay}
       fillUrl={appUrl(`/e/${detail.schedule.fill_token}`)}
       viewUrl={appUrl(`/v/${detail.schedule.view_token}`)}
     />

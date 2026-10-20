@@ -301,6 +301,11 @@ export function PublishedView({
   );
 }
 
+/**
+ * O diálogo fica montado e só alterna `open`. Remontá-lo ao abrir fazia ele
+ * fechar sozinho: o `pointerup` do clique que o abriu chega depois da
+ * montagem e o Radix o lê como clique fora. A key vai no corpo.
+ */
 function SwapDialog({
   token,
   target,
@@ -312,27 +317,50 @@ function SwapDialog({
   monthTitle: string;
   onClose: () => void;
 }) {
+  return (
+    <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        {target ? (
+          <SwapDialogBody
+            key={target.slot.assignmentId ?? "none"}
+            token={token}
+            target={target}
+            monthTitle={monthTitle}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SwapDialogBody({
+  token,
+  target,
+  monthTitle,
+}: {
+  token: string;
+  target: { event: PublishedEvent; slot: PublishedSlot };
+  monthTitle: string;
+}) {
   const router = useRouter();
   const [reason, setReason] = React.useState("");
   const [pending, startTransition] = React.useTransition();
   const [url, setUrl] = React.useState<string | null>(null);
 
-  const message = target
-    ? [
-        "🔄 *Preciso de substituição*",
-        "",
-        `${target.event.timeLabel} · ${target.event.locationName} (${monthTitle})`,
-        reason ? `Motivo: ${reason}` : "",
-        "",
-        "Quem puder assumir, é só abrir e confirmar:",
-        url ?? "",
-      ]
-        .filter(Boolean)
-        .join("\n")
-    : "";
+  const message = [
+    "🔄 *Preciso de substituição*",
+    "",
+    `${target.event.timeLabel} · ${target.event.locationName} (${monthTitle})`,
+    reason ? `Motivo: ${reason}` : "",
+    "",
+    "Quem puder assumir, é só abrir e confirmar:",
+    url ?? "",
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   const submit = () => {
-    if (!target?.slot.assignmentId) return;
+    if (!target.slot.assignmentId) return;
     startTransition(async () => {
       const res = await requestSwapPublicAction({
         token,
@@ -349,69 +377,65 @@ function SwapDialog({
   };
 
   return (
-    <Dialog open={!!target} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Pedir substituição</DialogTitle>
-          <DialogDescription>
-            {target
-              ? `${target.event.timeLabel} · ${target.event.locationName}`
-              : ""}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <DialogHeader>
+        <DialogTitle>Pedir substituição</DialogTitle>
+        <DialogDescription>
+          {`${target.event.timeLabel} · ${target.event.locationName}`}
+        </DialogDescription>
+      </DialogHeader>
 
-        {url ? (
-          <div className="space-y-3">
-            <p className="text-sm">
-              Pedido aberto. Mande o link no grupo — quem clicar primeiro assume
-              a vaga.
-            </p>
-            <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-2">
-              <code className="min-w-0 flex-1 truncate text-xs">{url}</code>
-              <Button
-                size="icon"
-                variant="ghost"
-                aria-label="Copiar link"
-                onClick={() => {
-                  void copyToClipboard(url);
-                  toast.success("Link copiado");
-                }}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <Button asChild className="w-full">
-              <a
-                href={whatsAppUrl(message)}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Mandar no WhatsApp
-              </a>
+      {url ? (
+        <div className="space-y-3">
+          <p className="text-sm">
+            Pedido aberto. Mande o link no grupo — quem clicar primeiro assume a
+            vaga.
+          </p>
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-2">
+            <code className="min-w-0 flex-1 truncate text-xs">{url}</code>
+            <Button
+              size="icon"
+              variant="ghost"
+              aria-label="Copiar link"
+              onClick={() => {
+                void copyToClipboard(url);
+                toast.success("Link copiado");
+              }}
+            >
+              <Copy className="h-4 w-4" />
             </Button>
           </div>
-        ) : (
-          <div className="space-y-3">
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              maxLength={280}
-              placeholder="Motivo (opcional)"
-              className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
-            />
-            <Button className="w-full" disabled={pending} onClick={submit}>
-              {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Abrir pedido
-            </Button>
-            <p className="text-xs text-muted-foreground">
-              Quem marcou disponibilidade para esse horário recebe um aviso por
-              e-mail.
-            </p>
-          </div>
-        )}
-      </DialogContent>
-    </Dialog>
+          <Button asChild className="w-full">
+            <a
+              href={whatsAppUrl(message)}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Mandar no WhatsApp
+            </a>
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            rows={3}
+            maxLength={280}
+            placeholder="Motivo (opcional)"
+            className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
+          />
+          <Button className="w-full" disabled={pending} onClick={submit}>
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Abrir pedido
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            Quem marcou disponibilidade para esse horário recebe um aviso por
+            e-mail.
+          </p>
+        </div>
+      )}
+    </>
   );
 }

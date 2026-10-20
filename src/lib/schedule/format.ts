@@ -5,6 +5,7 @@ import {
   monthLabel,
   weekdayLong,
 } from "@/lib/date";
+import type { ScheduleKind } from "@/lib/db/types";
 import type { DayGroup, EventView, ScheduleDetail } from "@/lib/schedule/types";
 
 export function personLabel(p: {
@@ -21,6 +22,20 @@ function namesOf(event: EventView): string[] {
 }
 
 /**
+ * Numa escala de novena o título já diz qual devoção é; repetir o nome em
+ * cada um dos nove dias só faz a mensagem crescer. "1º dia da Novena em honra
+ * a X" vira "1º dia".
+ */
+function eventLabel(
+  label: string | null,
+  schedule: { title: string; kind?: ScheduleKind },
+): string | null {
+  if (!label || schedule.kind !== "novena") return label;
+  const suffix = ` da ${schedule.title}`;
+  return label.endsWith(suffix) ? label.slice(0, -suffix.length) : label;
+}
+
+/**
  * A mensagem que abre o preenchimento — o equivalente ao "Bom dia, pessoal"
  * que o coordenador manda hoje no grupo com o link do Google Forms.
  */
@@ -30,20 +45,25 @@ export function buildInviteMessage({
   deadlineLabel,
   hasNovena,
 }: {
-  schedule: { title: string; month: string };
+  schedule: { title: string; month: string; kind?: ScheduleKind };
   url: string;
   deadlineLabel: string | null;
   hasNovena: boolean;
 }): string {
+  const isNovena = schedule.kind === "novena";
   const lines = [
     "Bom dia, pessoal! 🙏",
     "",
-    `Está aberta a escala de ${monthLabel(schedule.month).toLowerCase()}. Deixo o link para que possamos nos organizar com calma:`,
+    isNovena
+      ? `Está aberta a escala da ${schedule.title}. Deixo o link para nos organizarmos:`
+      : `Está aberta a escala de ${monthLabel(schedule.month).toLowerCase()}. Deixo o link para que possamos nos organizar com calma:`,
     "",
     url,
     "",
   ];
-  if (hasNovena) {
+  // Só vale avisar quando a novena está dentro da escala do mês; se ela tem
+  // escala própria, este link já é o dela.
+  if (hasNovena && !isNovena) {
     lines.push(
       "A escala da novena está nesse mesmo link, podem preencher tudo junto.",
       "",
@@ -52,7 +72,12 @@ export function buildInviteMessage({
   if (deadlineLabel) {
     lines.push(`⏰ Preenchimento disponível até ${deadlineLabel}.`);
   }
-  lines.push("", "Basta abrir, escolher o seu nome e marcar as datas.");
+  lines.push(
+    "",
+    isNovena
+      ? "Basta abrir, escolher o seu nome e pegar o dia que puder."
+      : "Basta abrir, escolher o seu nome e marcar as datas.",
+  );
   return lines.join("\n");
 }
 
@@ -61,11 +86,13 @@ export function buildPublishedMessage({
   schedule,
   url,
 }: {
-  schedule: { title: string; month: string };
+  schedule: { title: string; month: string; kind?: ScheduleKind };
   url: string;
 }): string {
   return [
-    `✅ *ESCALA DE ${monthLabel(schedule.month).toUpperCase()}* publicada!`,
+    schedule.kind === "novena"
+      ? `✅ *${schedule.title.toUpperCase()}* — escala publicada!`
+      : `✅ *ESCALA DE ${monthLabel(schedule.month).toUpperCase()}* publicada!`,
     "",
     "Confiram onde cada um está servindo:",
     url,
@@ -82,7 +109,9 @@ export function buildPublishedMessage({
 export function buildScheduleText(detail: ScheduleDetail): string {
   const { schedule, timezone, days } = detail;
   const out: string[] = [
-    `*ESCALA MINISTÉRIO DE ACÓLITOS — ${monthLabel(schedule.month).toUpperCase()}*`,
+    schedule.kind === "monthly"
+      ? `*ESCALA MINISTÉRIO DE ACÓLITOS — ${monthLabel(schedule.month).toUpperCase()}*`
+      : `*${schedule.title.toUpperCase()}*`,
     "",
   ];
 
@@ -95,7 +124,9 @@ export function buildScheduleText(detail: ScheduleDetail): string {
     for (const ev of day.events) {
       const names = namesOf(ev);
       out.push(
-        `• ${formatTime(ev.starts_at, timezone)} — ${ev.location.name}${ev.label ? ` (${ev.label})` : ""}`,
+        `• ${formatTime(ev.starts_at, timezone)} — ${ev.location.name}${
+          eventLabel(ev.label, schedule) ? ` (${eventLabel(ev.label, schedule)})` : ""
+        }`,
       );
       out.push(names.length ? `  ${names.join(", ")}` : "  _sem acólitos_");
     }
@@ -214,7 +245,9 @@ export function buildScheduleCsv(detail: ScheduleDetail): string {
         formatFullDate(ev.starts_at, timezone),
         weekdayLong(ev.starts_at, timezone).toUpperCase(),
         formatTime(ev.starts_at, timezone).toUpperCase(),
-        ev.label ? `${ev.location.name} — ${ev.label}` : ev.location.name,
+        eventLabel(ev.label, detail.schedule)
+          ? `${ev.location.name} — ${eventLabel(ev.label, detail.schedule)}`
+          : ev.location.name,
         ...Array.from({ length: maxSlots }, (_, i) => names[i] ?? ""),
       ];
     }),

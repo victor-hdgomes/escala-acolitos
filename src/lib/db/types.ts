@@ -11,6 +11,8 @@ export type ScheduleStatus =
   | "published"
   | "archived";
 export type EventKind = "mass" | "novena" | "special";
+/** O que a escala é: o mês inteiro, uma novena avulsa, ou outra devoção. */
+export type ScheduleKind = "monthly" | "novena" | "special";
 export type SignupMode = "availability" | "direct";
 export type AssignmentStatus = "confirmed" | "swap_requested";
 export type SwapStatus = "open" | "filled" | "cancelled";
@@ -99,6 +101,7 @@ export type Schedule = {
   parish_id: string;
   title: string;
   month: string;
+  kind: ScheduleKind;
   status: ScheduleStatus;
   availability_deadline: string | null;
   intro_note: string | null;

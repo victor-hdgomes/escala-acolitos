@@ -23,6 +23,8 @@ export interface Suggestion {
   available: boolean;
   /** Já está escalada em outra celebração no mesmo dia. */
   sameDayConflict: boolean;
+  /** O conflito do dia veio de outra escala (ex.: a novena avulsa). */
+  otherScheduleConflict: boolean;
   /** Já está escalada nesta celebração. */
   alreadyInEvent: boolean;
   reasons: string[];
@@ -49,6 +51,7 @@ export function rankCandidates({
   statsById,
   availableIds,
   sameDayIds,
+  otherScheduleDayIds,
   eventPersonIds,
   includeUnavailable = false,
 }: {
@@ -56,6 +59,8 @@ export function rankCandidates({
   statsById: Map<string, PersonStats>;
   availableIds: Set<string>;
   sameDayIds: Set<string>;
+  /** Ocupados no mesmo dia por outra escala da paróquia. */
+  otherScheduleDayIds?: Set<string>;
   eventPersonIds: Set<string>;
   includeUnavailable?: boolean;
 }): Suggestion[] {
@@ -68,7 +73,10 @@ export function rankCandidates({
 
     const s = statsById.get(person.id) ?? EMPTY_STATS;
     const alreadyInEvent = eventPersonIds.has(person.id);
-    const sameDayConflict = !alreadyInEvent && sameDayIds.has(person.id);
+    const otherScheduleConflict =
+      !alreadyInEvent && !!otherScheduleDayIds?.has(person.id);
+    const sameDayConflict =
+      !alreadyInEvent && (sameDayIds.has(person.id) || otherScheduleConflict);
 
     let score = 100;
     const reasons: string[] = [];
@@ -116,7 +124,11 @@ export function rankCandidates({
     }
     if (sameDayConflict) {
       score -= 400;
-      reasons.unshift("já escalada neste dia");
+      reasons.unshift(
+        otherScheduleConflict
+          ? "já escalada em outra escala neste dia"
+          : "já escalada neste dia",
+      );
     }
     if (alreadyInEvent) {
       score -= 1000;
@@ -128,6 +140,7 @@ export function rankCandidates({
       score,
       available,
       sameDayConflict,
+      otherScheduleConflict,
       alreadyInEvent,
       reasons,
     });

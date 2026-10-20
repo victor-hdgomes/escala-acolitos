@@ -231,7 +231,11 @@ function StatTile({
         <Icon className={`h-5 w-5 shrink-0 ${color}`} />
         <div className="min-w-0">
           <p className={`text-xl font-semibold tabular-nums ${color}`}>{value}</p>
-          <p className="truncate text-xs text-muted-foreground">{label}</p>
+          {/* Sem truncate: "Celebrações em risco" não cabe numa linha em
+              coluna estreita, e cortar o rótulo esconde a informação. */}
+          <p className="text-xs leading-tight text-balance text-muted-foreground">
+            {label}
+          </p>
         </div>
       </CardContent>
     </Card>

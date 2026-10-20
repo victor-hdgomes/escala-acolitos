@@ -76,7 +76,13 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
     <div className="space-y-4">
       <LinkCard
         title="Link de preenchimento"
-        description="É o que vai no grupo para o pessoal marcar disponibilidade."
+        description={
+          // Numa novena de preenchimento direto ninguém marca disponibilidade:
+          // o acólito pega a vaga ele mesmo.
+          events.every((e) => e.signup_mode === "direct")
+            ? "É o que vai no grupo para o pessoal pegar as vagas."
+            : "É o que vai no grupo para o pessoal marcar disponibilidade."
+        }
         url={fillUrl}
         message={inviteMessage}
       />

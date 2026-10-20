@@ -3,13 +3,19 @@
 --
 -- Cole este arquivo inteiro no SQL Editor do Supabase e rode uma vez.
 -- Contém:
---   1. o schema, as funções e as policies de RLS (migrations/0001_init.sql)
---   2. o seed da Paróquia Cristo Rei: 7 locais, a grade semanal e os
---      54 acólitos da escala de outubro (seed.sql)
+--   • 0001_init.sql
+--   • 0002_restrict_parish_creation.sql
+--   • 0003_schedule_kind.sql
+--   • o seed da Paróquia Cristo Rei: 7 locais, a grade semanal e os
+--     54 acólitos da escala de outubro (seed.sql)
 --
 -- Depois disto: crie sua conta em /signup e rode `supabase/grant-admin.sql`.
 -- ============================================================================
 
+
+-- ==========================================================================
+-- 0001_init.sql
+-- ==========================================================================
 
 -- Escala de Acólitos — schema inicial
 --
@@ -484,9 +490,56 @@ create policy email_log_select on public.email_log for select using (public.can_
 create policy audit_log_select on public.audit_log for select using (public.can_manage(parish_id));
 
 
--- ============================================================================
+-- ==========================================================================
+-- 0002_restrict_parish_creation.sql
+-- ==========================================================================
+
+-- Só o dono da instalação cria grupos.
+--
+-- Antes, qualquer conta autenticada podia criar uma paróquia e virar admin
+-- dela — bom para auto-atendimento, ruim aqui: quem entra por convite não
+-- deve conseguir abrir grupos novos. Admin de paróquia continua mandando no
+-- grupo dele; criar outro é só do superadmin.
+--
+-- Esta policy é defesa em profundidade: a criação roda por Server Action com
+-- service role (o membership de admin precisa existir no mesmo instante em
+-- que a paróquia nasce), e é lá que a checagem de verdade acontece.
+
+drop policy if exists parishes_insert on public.parishes;
+
+create policy parishes_insert on public.parishes for insert
+  with check (public.is_superadmin());
+
+
+-- ==========================================================================
+-- 0003_schedule_kind.sql
+-- ==========================================================================
+
+-- Escalas avulsas: uma novena pode ter escala própria, separada da do mês.
+--
+-- Na prática o ministério trata as duas como coisas diferentes: a escala
+-- mensal sai da grade de missas, a novena é uma devoção com data própria,
+-- vagas numeradas e link próprio no grupo. Forçar a novena para dentro da
+-- escala do mês obrigava a abrir as duas ao mesmo tempo e misturava as
+-- mensagens.
+--
+-- `kind` só descreve a escala; o que muda o comportamento de preenchimento
+-- continua sendo `events.signup_mode`.
+
+alter table public.schedules
+  add column if not exists kind text not null default 'monthly'
+  check (kind in ('monthly', 'novena', 'special'));
+
+-- Escalas que já existem são mensais.
+update public.schedules set kind = 'monthly' where kind is null;
+
+create index if not exists schedules_parish_kind_idx
+  on public.schedules(parish_id, kind, month desc);
+
+
+-- ==========================================================================
 -- SEED
--- ============================================================================
+-- ==========================================================================
 
 -- Seed — Paróquia Cristo Rei, Parque Atheneu.
 -- Locais, grade semanal e a lista de acólitos tirada da escala de outubro.

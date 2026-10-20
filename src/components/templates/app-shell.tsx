@@ -14,6 +14,8 @@ import {
   LogOut,
   Moon,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Repeat2,
   Settings,
@@ -37,6 +39,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Sheet,
   SheetContent,
@@ -168,13 +175,17 @@ function ParishSwitcher({ user, className }: { user: ShellUser; className?: stri
             {p.id === user.parishId ? <Check className="h-4 w-4" /> : null}
           </DropdownMenuItem>
         ))}
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/grupos/novo">
-            <Plus className="h-4 w-4" />
-            Criar novo grupo
-          </Link>
-        </DropdownMenuItem>
+        {user.isSuperadmin ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/grupos/novo">
+                <Plus className="h-4 w-4" />
+                Criar novo grupo
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -233,6 +244,42 @@ function ThemeToggle() {
   );
 }
 
+const COLLAPSE_KEY = "escala:sidebar-recolhida";
+
+/**
+ * Estado recolhido da barra lateral, lembrado por aparelho.
+ *
+ * A leitura do localStorage só acontece depois de montar — no servidor ele
+ * não existe, e ler durante a renderização quebraria a hidratação. Por isso a
+ * barra nasce expandida e se ajusta logo em seguida.
+ */
+function useSidebarCollapsed() {
+  const [collapsed, setCollapsed] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage é sistema externo
+      if (localStorage.getItem(COLLAPSE_KEY) === "1") setCollapsed(true);
+    } catch {
+      // storage bloqueado — segue expandida
+    }
+  }, []);
+
+  const toggle = React.useCallback(() => {
+    setCollapsed((previous) => {
+      const next = !previous;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+      } catch {
+        // ignora
+      }
+      return next;
+    });
+  }, []);
+
+  return { collapsed, toggle };
+}
+
 function DesktopSidebar({
   user,
   items,
@@ -242,49 +289,118 @@ function DesktopSidebar({
   items: NavItem[];
   pathname: string;
 }) {
+  const { collapsed, toggle } = useSidebarCollapsed();
+
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground md:flex">
-      <div className="flex h-14 items-center gap-2 px-4">
-        <Church className="h-5 w-5 text-primary" />
-        <span className="font-semibold tracking-tight">Escala</span>
+    <aside
+      data-collapsed={collapsed}
+      className={cn(
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-border bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:flex",
+        collapsed ? "w-16" : "w-64",
+      )}
+    >
+      {/* O controle mora no topo: no rodapé ele disputa espaço com o overlay
+          de desenvolvimento do Next e com a barra do sistema no desktop. */}
+      <div
+        className={cn(
+          "flex h-14 items-center gap-2",
+          collapsed ? "justify-center px-2" : "px-4",
+        )}
+      >
+        {!collapsed ? (
+          <>
+            <Church className="h-5 w-5 shrink-0 text-primary" />
+            <span className="min-w-0 flex-1 truncate font-semibold tracking-tight">
+              Escala
+            </span>
+          </>
+        ) : null}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggle}
+              aria-label={collapsed ? "Expandir menu" : "Recolher menu"}
+              aria-expanded={!collapsed}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {collapsed ? "Expandir menu" : "Recolher menu"}
+          </TooltipContent>
+        </Tooltip>
       </div>
       <Separator />
-      <div className="px-2 py-2">
-        <ParishSwitcher user={user} />
-      </div>
-      <Separator />
+
+      {!collapsed ? (
+        <>
+          <div className="px-2 py-2">
+            <ParishSwitcher user={user} />
+          </div>
+          <Separator />
+        </>
+      ) : null}
+
       <nav className="flex-1 space-y-1 overflow-y-auto p-2">
         {items.map((item) => {
           const Icon = item.icon;
           const active = isActive(pathname, item.href);
-          return (
+          const link = (
             <Link
               key={item.href}
               href={item.href}
+              aria-label={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-3 rounded-md px-3 py-2 text-sm transition-colors",
+                "flex items-center gap-3 rounded-md py-2 text-sm transition-colors",
+                collapsed ? "justify-center px-2" : "px-3",
                 active
                   ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
                   : "text-muted-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
               )}
             >
-              <Icon className="h-4 w-4" />
-              {item.label}
+              <Icon className="h-4 w-4 shrink-0" />
+              {!collapsed ? <span className="truncate">{item.label}</span> : null}
             </Link>
+          );
+
+          // Recolhida, o ícone sozinho não diz o que é: o nome vem no tooltip.
+          return collapsed ? (
+            <Tooltip key={item.href}>
+              <TooltipTrigger asChild>{link}</TooltipTrigger>
+              <TooltipContent side="right">{item.label}</TooltipContent>
+            </Tooltip>
+          ) : (
+            link
           );
         })}
       </nav>
+
       <Separator />
-      <div className="space-y-2 p-2">
-        <div className="px-2">
-          <p className="truncate text-sm font-medium">
-            {user.personName ?? user.displayName}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">{user.email}</p>
-        </div>
-        <div className="flex items-center justify-between">
+      <div className={cn("space-y-2 p-2", collapsed && "flex flex-col items-center")}>
+        {!collapsed ? (
+          <div className="px-2">
+            <p className="truncate text-sm font-medium">
+              {user.personName ?? user.displayName}
+            </p>
+            <p className="truncate text-xs text-muted-foreground">
+              {user.email}
+            </p>
+          </div>
+        ) : null}
+        <div
+          className={cn(
+            "flex items-center",
+            collapsed ? "flex-col gap-1" : "justify-between",
+          )}
+        >
           <ThemeToggle />
-          <ViewAsMenu user={user} />
+          {!collapsed ? <ViewAsMenu user={user} /> : null}
           <form action={signOutAction}>
             <Button variant="ghost" size="icon" type="submit" aria-label="Sair">
               <LogOut className="h-4 w-4" />

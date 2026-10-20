@@ -15,7 +15,11 @@ import { ResponsesTab } from "@/components/organisms/schedules/responses-tab";
 import { ShareTab } from "@/components/organisms/schedules/share-tab";
 import { ScheduleStatusBadge } from "@/components/organisms/schedules/status-badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ScrollTabsList,
+  ScrollTabsTrigger,
+} from "@/components/molecules/scroll-tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
 import type { LocationLite, PersonLite, ScheduleDetail } from "@/lib/schedule/types";
 import type { PersonStats } from "@/lib/schedule/suggest";
 
@@ -26,6 +30,8 @@ export interface ScheduleViewProps {
   locations: LocationLite[];
   stats: Record<string, PersonStats>;
   locationCounts: Record<string, Record<string, number>>;
+  /** dia (no fuso do grupo) → pessoas já escaladas em outras escalas. */
+  busyByDay: Record<string, string[]>;
   fillUrl: string;
   viewUrl: string;
 }
@@ -69,11 +75,14 @@ export function ScheduleDetailView(props: ScheduleViewProps) {
       <header className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h1 className="flex items-center gap-2 text-xl font-semibold tracking-tight">
-              {monthTitle}
+            <h1 className="flex flex-wrap items-center gap-2 text-xl font-semibold tracking-tight">
+              {detail.schedule.kind === "monthly"
+                ? monthTitle
+                : detail.schedule.title}
               <ScheduleStatusBadge status={detail.schedule.status} />
             </h1>
             <p className="text-sm text-muted-foreground">
+              {detail.schedule.kind !== "monthly" ? `${monthTitle} · ` : ""}
               {filledSlots} de {totalSlots} vagas preenchidas ·{" "}
               {events.length} {events.length === 1 ? "celebração" : "celebrações"}
             </p>
@@ -129,15 +138,15 @@ export function ScheduleDetailView(props: ScheduleViewProps) {
       </header>
 
       <Tabs defaultValue="assembly">
-        <TabsList className="w-full overflow-x-auto">
-          <TabsTrigger value="assembly">Montagem</TabsTrigger>
-          <TabsTrigger value="responses">Respostas</TabsTrigger>
-          <TabsTrigger value="events">Celebrações</TabsTrigger>
-          <TabsTrigger value="share">
+        <ScrollTabsList>
+          <ScrollTabsTrigger value="assembly">Montagem</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="responses">Respostas</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="events">Celebrações</ScrollTabsTrigger>
+          <ScrollTabsTrigger value="share">
             <Share2 className="h-3.5 w-3.5" />
             Compartilhar
-          </TabsTrigger>
-        </TabsList>
+          </ScrollTabsTrigger>
+        </ScrollTabsList>
 
         <TabsContent value="assembly" className="mt-4">
           <AssemblyTab {...props} />

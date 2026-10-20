@@ -42,12 +42,19 @@ export function PersonPicker({
   onChange,
   open,
   onOpenChange,
+  title = "Qual é o seu nome?",
+  description = "Selecione para marcar suas datas.",
+  emptyMessage = "Nenhum nome encontrado. Fale com a coordenação para ser incluído.",
 }: {
   people: PickablePerson[];
   value: PickablePerson | null;
   onChange: (person: PickablePerson) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** O seletor serve a três telas; cada uma explica o próprio passo. */
+  title?: string;
+  description?: string;
+  emptyMessage?: string;
 }) {
   const [query, setQuery] = React.useState("");
 
@@ -64,10 +71,8 @@ export function PersonPicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle>Qual é o seu nome?</DialogTitle>
-          <DialogDescription>
-            Selecione para marcar suas datas.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="px-4 pb-3">
@@ -120,7 +125,7 @@ export function PersonPicker({
 
           {filtered.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Nenhum nome encontrado. Fale com a coordenação para ser incluído.
+              {emptyMessage}
             </p>
           ) : null}
         </div>
