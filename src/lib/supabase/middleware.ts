@@ -5,11 +5,11 @@ import type { Database } from "@/lib/db/types";
 import { supabasePublicKey, supabaseUrl } from "@/lib/supabase/env";
 
 /**
- * Rotas que não exigem sessão. As três primeiras são o coração do app: o
- * acólito nunca precisa de conta.
- *   /e/<token>  formulário de disponibilidade
- *   /v/<token>  escala publicada (read-only)
- *   /t/<token>  pedido de substituição
+ * Routes that need no session. The first three are the heart of the app: an
+ * altar server never needs an account.
+ *   /e/<token>  availability form
+ *   /v/<token>  published schedule (read-only)
+ *   /t/<token>  swap request
  */
 const PUBLIC_PREFIXES = [
   "/e/",
@@ -29,9 +29,9 @@ function isPublic(pathname: string) {
 }
 
 /**
- * Sem nenhum cookie `sb-*` não existe sessão para validar: chamar getUser()
- * seria um round-trip à Auth API por request. Como o tráfego esperado é
- * majoritariamente anônimo (o grupo todo abrindo o link), isso importa.
+ * With no `sb-*` cookie there is no session to validate: calling getUser()
+ * would be a round-trip to the Auth API on every request. Since the expected
+ * traffic is mostly anonymous (the whole group opening the link), that matters.
  */
 function hasAuthCookie(request: NextRequest): boolean {
   return request.cookies
@@ -87,7 +87,7 @@ export async function updateSession(request: NextRequest) {
     (pathname.startsWith("/login") || pathname.startsWith("/signup"))
   ) {
     const url = request.nextUrl.clone();
-    url.pathname = "/inicio";
+    url.pathname = "/home";
     url.search = "";
     return NextResponse.redirect(url);
   }

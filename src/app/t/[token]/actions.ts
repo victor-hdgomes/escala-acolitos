@@ -1,22 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
-import { fail, ok, type ActionResult } from "@/lib/action-result";
+import { ERROR_CODES, fail, ok, type ActionResult } from "@/lib/action-result";
 import { logAudit } from "@/lib/audit";
 import { swapFilledEmail } from "@/lib/mail/templates";
 import { sendMail } from "@/lib/mail/send";
 import { canActAsPerson, resolveSwapToken } from "@/lib/public-access";
+import { getDateFormatter } from "@/lib/server-date";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Assumir uma substituição pelo link público.
+ * Taking over a cover request through the public link.
  *
- * Primeiro que clica leva: a troca é direta e o coordenador só é avisado.
- * A corrida é resolvida no update condicional — só altera o pedido que ainda
- * está `open`, então o segundo clique não sobrescreve o primeiro.
+ * First click wins: the swap happens straight away and the coordinator is only
+ * notified. The race is settled by the conditional update - it only touches a
+ * request still marked `open`, so the second click cannot overwrite the first.
  */
 export async function acceptSwapAction(input: {
   token: string;
@@ -25,25 +27,25 @@ export async function acceptSwapAction(input: {
   const parsed = z
     .object({ token: z.string().min(8), personId: z.string().uuid() })
     .safeParse(input);
-  if (!parsed.success) return fail("Pedido inválido.");
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
 
   const ctx = await resolveSwapToken(parsed.data.token);
-  if (!ctx) return fail("Link inválido.");
+  if (!ctx) return fail(ERROR_CODES.INVALID_LINK);
   if (ctx.swap.status !== "open") {
     return fail(
       ctx.swap.status === "filled"
-        ? "Essa vaga já foi assumida."
-        : "Esse pedido foi cancelado.",
+        ? ERROR_CODES.SWAP_ALREADY_FILLED
+        : ERROR_CODES.SWAP_CANCELLED,
     );
   }
   if (Date.parse(ctx.event.starts_at) < Date.now()) {
-    return fail("Essa celebração já passou.");
+    return fail(ERROR_CODES.SWAP_IN_THE_PAST);
   }
 
   const person = ctx.people.find((p) => p.id === parsed.data.personId);
-  if (!person) return fail("Nome não encontrado.");
+  if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
   if (person.id === ctx.swap.requested_by_person) {
-    return fail("Esse é o nome de quem pediu a substituição.");
+    return fail(ERROR_CODES.SWAP_OWN_REQUEST);
   }
 
   const supabase = await createClient();
@@ -51,7 +53,7 @@ export async function acceptSwapAction(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!canActAsPerson(person, user?.id ?? null)) {
-    return fail("Esse nome está vinculado a uma conta. Entre com ela.");
+    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
 
   const admin = createAdminClient();
@@ -62,10 +64,10 @@ export async function acceptSwapAction(input: {
     .eq("event_id", ctx.event.id)
     .eq("person_id", person.id)
     .maybeSingle();
-  if (already) return fail("Você já está escalado nesta celebração.");
+  if (already) return fail(ERROR_CODES.ALREADY_IN_CELEBRATION);
 
-  // Fecha o pedido primeiro: se dois cliques chegarem juntos, só um encontra
-  // o status 'open' e segue adiante.
+  // Close the request first: if two clicks arrive together, only one of them
+  // finds the status 'open' and carries on.
   const { data: claimed } = await admin
     .from("swap_requests")
     .update({
@@ -76,19 +78,20 @@ export async function acceptSwapAction(input: {
     .eq("id", ctx.swap.id)
     .eq("status", "open")
     .select("id");
-  if (!claimed?.length) return fail("Essa vaga acabou de ser assumida.");
+  if (!claimed?.length) return fail(ERROR_CODES.SLOT_TAKEN);
 
   const { error } = await admin
     .from("assignments")
     .update({ person_id: person.id, status: "confirmed" })
     .eq("id", ctx.assignment.id);
   if (error) {
-    // Desfaz para o pedido não ficar "resolvido" sem a troca ter acontecido.
+    // Roll back, so the request is not left "resolved" without the swap
+    // having actually happened.
     await admin
       .from("swap_requests")
       .update({ status: "open", filled_by_person: null, filled_at: null })
       .eq("id", ctx.swap.id);
-    return fail("Não foi possível assumir a vaga.");
+    return fail(ERROR_CODES.SWAP_ACCEPT_FAILED);
   }
 
   await notifyRequester(ctx, person.full_name);
@@ -103,8 +106,8 @@ export async function acceptSwapAction(input: {
   });
 
   revalidatePath(`/t/${parsed.data.token}`);
-  revalidatePath(`/escalas/${ctx.schedule.id}`);
-  revalidatePath("/minhas-missas");
+  revalidatePath(`/schedules/${ctx.schedule.id}`);
+  revalidatePath("/my-masses");
   return ok();
 }
 
@@ -127,12 +130,17 @@ async function notifyRequester(
   }
   if (!to) return;
 
+  const [t, df] = await Promise.all([
+    getTranslations("emails"),
+    getDateFormatter(ctx.parish.timezone),
+  ]);
   const mail = swapFilledEmail({
+    t,
+    df,
     personName: requester.full_name,
     filledByName,
     starts_at: ctx.event.starts_at,
     locationName: ctx.location.name,
-    timezone: ctx.parish.timezone,
   });
   await sendMail({
     to,

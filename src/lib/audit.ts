@@ -6,12 +6,12 @@ import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
- * Registro de quem fez o quê.
+ * A record of who did what.
  *
- * Existe porque o formulário é aberto: sem login, a única forma de saber quem
- * apagou a disponibilidade de alguém é ter gravado. O IP nunca é guardado em
- * claro — só o hash, que serve para "foi o mesmo aparelho" sem virar um dado
- * pessoal armazenado.
+ * It exists because the form is open: with no sign-in, the only way to know who
+ * deleted someone else's availability is to have written it down. The IP is
+ * never stored in the clear - only the hash, which answers "same device?"
+ * without becoming a stored personal detail.
  */
 export async function logAudit({
   parishId,
@@ -43,7 +43,7 @@ export async function logAudit({
       ip_hash: await hashedIp(),
     });
   } catch {
-    // Auditoria nunca derruba a ação do usuário.
+    // Auditing never brings down the user's action.
   }
 }
 
@@ -55,7 +55,7 @@ async function hashedIp(): Promise<string | null> {
       h.get("x-real-ip") ||
       null;
     if (!raw) return null;
-    const salt = process.env.AUDIT_IP_SALT ?? "escala";
+    const salt = process.env.AUDIT_IP_SALT ?? "audit";
     return createHash("sha256").update(`${salt}:${raw}`).digest("hex").slice(0, 32);
   } catch {
     return null;

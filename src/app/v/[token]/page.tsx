@@ -1,23 +1,22 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { PublishedView } from "@/components/organisms/published/published-view";
 import type { PublishedEvent } from "@/components/organisms/published/published-view";
-import {
-  formatDayMonth,
-  formatTime,
-  monthLabel,
-  weekdayLong,
-  dayKey,
-} from "@/lib/date";
-import { resolveViewToken } from "@/lib/public-access";
+import { dayKey } from "@/lib/date";
 import { nowDate, nowMs } from "@/lib/now";
+import { resolveViewToken } from "@/lib/public-access";
+import { getDateFormatter } from "@/lib/server-date";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = {
-  title: "Escala",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("published");
+  return {
+    title: t("title"),
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function PublishedSchedulePage({
   params,
@@ -29,15 +28,16 @@ export default async function PublishedSchedulePage({
   if (!ctx) notFound();
 
   const { timezone } = ctx.detail;
+  const df = await getDateFormatter(timezone);
   const now = nowMs();
 
   const days = ctx.detail.days.map((day) => ({
     key: day.key,
-    title: formatDayMonth(day.events[0].starts_at, timezone),
-    weekdayLabel: weekdayLong(day.events[0].starts_at, timezone),
+    title: df.dayMonth(day.events[0].starts_at),
+    weekdayLabel: df.weekday(day.events[0].starts_at),
     events: day.events.map<PublishedEvent>((ev) => ({
       id: ev.id,
-      timeLabel: formatTime(ev.starts_at, timezone),
+      timeLabel: df.time(ev.starts_at),
       locationName: ev.location.name,
       locationColor: ev.location.color,
       label: ev.label,
@@ -75,14 +75,15 @@ export default async function PublishedSchedulePage({
           },
         ]),
     ).values(),
-  ].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    // Sorted in the reader's language: that is where the accent rules live.
+  ].sort((a, b) => a.name.localeCompare(b.name, df.locale));
 
   return (
     <PublishedView
       token={token}
       parishName={ctx.parish.name}
       title={ctx.schedule.title}
-      monthTitle={monthLabel(ctx.schedule.month)}
+      monthTitle={df.monthLabel(ctx.schedule.month)}
       days={days}
       people={people}
       todayKey={dayKey(nowDate(), timezone)}

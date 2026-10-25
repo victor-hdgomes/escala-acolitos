@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ArrowDownWideNarrow, Download } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -25,11 +26,7 @@ export interface StatRow {
 
 type SortKey = "served" | "answered" | "absent";
 
-const SORTS: Array<{ id: SortKey; label: string }> = [
-  { id: "served", label: "Quem serve mais" },
-  { id: "answered", label: "Quem responde mais" },
-  { id: "absent", label: "Quem sumiu" },
-];
+const SORT_KEYS: SortKey[] = ["served", "answered", "absent"];
 
 export function StatsView({
   rows,
@@ -38,6 +35,7 @@ export function StatsView({
   rows: StatRow[];
   months: Array<{ label: string; count: number }>;
 }) {
+  const t = useTranslations("stats");
   const [sort, setSort] = React.useState<SortKey>("served");
 
   const sorted = React.useMemo(() => {
@@ -45,7 +43,7 @@ export function StatsView({
     if (sort === "served") copy.sort((a, b) => b.served - a.served);
     if (sort === "answered") copy.sort((a, b) => b.answered - a.answered);
     if (sort === "absent") {
-      // Nunca serviu vem primeiro; depois quem está há mais tempo sem servir.
+      // Never served comes first; then whoever has gone longest without serving.
       copy.sort((a, b) => (b.daysSinceLast ?? 9999) - (a.daysSinceLast ?? 9999));
     }
     return copy;
@@ -58,17 +56,17 @@ export function StatsView({
 
   function downloadCsv() {
     const header = [
-      "Nome",
-      "Escalas",
-      "Datas marcadas",
-      "Dias desde a última",
-      "Local mais frequente",
+      t("csv.name"),
+      t("csv.served"),
+      t("csv.answered"),
+      t("csv.daysSinceLast"),
+      t("csv.topLocation"),
     ];
     const body = sorted.map((r) => [
       r.name,
       String(r.served),
       String(r.answered),
-      r.daysSinceLast === null ? "nunca serviu" : String(r.daysSinceLast),
+      r.daysSinceLast === null ? t("neverServed") : String(r.daysSinceLast),
       r.topLocation ?? "",
     ]);
     const csv = [header, ...body]
@@ -79,11 +77,12 @@ export function StatsView({
       )
       .join("\r\n");
 
+    // Leading byte-order mark so Excel opens the file as UTF-8.
     const blob = new Blob([`﻿${csv}`], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "estatisticas-acolitos.csv";
+    a.download = t("csv.fileName");
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -92,22 +91,21 @@ export function StatsView({
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Estatísticas</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Média de {average.toFixed(1)} escalas por acólito ·{" "}
-            {neverServed} nunca serviram
+            {t("summary", { average: average.toFixed(1), count: neverServed })}
           </p>
         </div>
         <Button size="sm" variant="outline" onClick={downloadCsv}>
           <Download className="h-4 w-4" />
-          CSV
+          {t("exportCsv")}
         </Button>
       </header>
 
       {months.length > 1 ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Escalações por mês</CardTitle>
+            <CardTitle className="text-base">{t("byMonth.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             {months.map((m) => {
@@ -134,25 +132,25 @@ export function StatsView({
       ) : null}
 
       <div className="flex flex-wrap gap-2">
-        {SORTS.map((s) => (
+        {SORT_KEYS.map((key) => (
           <Button
-            key={s.id}
+            key={key}
             size="sm"
-            variant={sort === s.id ? "default" : "outline"}
-            onClick={() => setSort(s.id)}
+            variant={sort === key ? "default" : "outline"}
+            onClick={() => setSort(key)}
           >
             <ArrowDownWideNarrow className="h-3.5 w-3.5" />
-            {s.label}
+            {t(`sorts.${key}`)}
           </Button>
         ))}
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Acólitos ({rows.length})</CardTitle>
-          <CardDescription>
-            A barra compara com quem mais serviu no período.
-          </CardDescription>
+          <CardTitle className="text-base">
+            {t("roster.title", { count: rows.length })}
+          </CardTitle>
+          <CardDescription>{t("roster.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
           {sorted.map((r, i) => (
@@ -168,7 +166,7 @@ export function StatsView({
                       variant="secondary"
                       className="bg-[color:var(--color-open)]/15 text-[color:var(--color-open)]"
                     >
-                      nunca serviu
+                      {t("neverServed")}
                     </Badge>
                   ) : (
                     <span className="text-sm font-medium tabular-nums">
@@ -185,10 +183,12 @@ export function StatsView({
                   </div>
                 </div>
                 <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {r.answered} datas marcadas
-                  {r.topLocation ? ` · mais em ${r.topLocation}` : ""}
+                  {t("row.answered", { count: r.answered })}
+                  {r.topLocation
+                    ? ` · ${t("row.topLocation", { location: r.topLocation })}`
+                    : ""}
                   {r.daysSinceLast !== null
-                    ? ` · última há ${r.daysSinceLast} dias`
+                    ? ` · ${t("row.lastServed", { count: r.daysSinceLast })}`
                     : ""}
                 </p>
               </div>

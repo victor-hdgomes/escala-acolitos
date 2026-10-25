@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import { useLocale, useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, Copy, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
+import { useDateFormatter } from "@/components/providers/timezone-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,14 +18,20 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { copyToClipboard, shareOrCopy } from "@/lib/client-utils";
-import { formatShortDate, formatTime } from "@/lib/date";
 import { buildReminderMessage } from "@/lib/schedule/format";
 
 /**
- * O que o Google Forms não dá hoje: quem respondeu, quem sumiu e onde a
- * escala vai faltar gente.
+ * What Google Forms does not give today: who answered, who vanished and where
+ * the schedule is going to be short of people.
  */
 export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
+  const t = useTranslations("schedules");
+  // The pasted message lives in its own namespace: it is written for the group
+  // chat, not for a screen.
+  const tw = useTranslations("whatsapp");
+  const locale = useLocale();
+  const df = useDateFormatter();
+
   const events = React.useMemo(
     () => detail.days.flatMap((d) => d.events),
     [detail.days],
@@ -45,7 +53,7 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
     .sort(
       (a, b) =>
         (countByPerson.get(b.id) ?? 0) - (countByPerson.get(a.id) ?? 0) ||
-        a.full_name.localeCompare(b.full_name, "pt-BR"),
+        a.full_name.localeCompare(b.full_name, locale),
     );
   const pending = active.filter((p) => !countByPerson.get(p.id));
 
@@ -57,10 +65,11 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
   );
 
   const reminder = buildReminderMessage({
+    t: tw,
     url: fillUrl,
     pendingNames: pending.map((p) => p.full_name),
     deadlineLabel: detail.schedule.availability_deadline
-      ? formatShortDate(detail.schedule.availability_deadline, detail.timezone)
+      ? df.shortDate(detail.schedule.availability_deadline)
       : null,
   });
 
@@ -68,19 +77,19 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <StatTile
-          label="Responderam"
+          label={t("responses.answeredTile")}
           value={answered.length}
           tone="filled"
           icon={CheckCircle2}
         />
         <StatTile
-          label="Faltam responder"
+          label={t("responses.pendingTile")}
           value={pending.length}
           tone="pending"
           icon={Users}
         />
         <StatTile
-          label="Celebrações em risco"
+          label={t("responses.atRiskTile")}
           value={atRisk.length}
           tone="open"
           icon={AlertTriangle}
@@ -90,9 +99,11 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
       {atRisk.length ? (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Vai faltar gente</CardTitle>
+            <CardTitle className="text-base">
+              {t("responses.atRiskTitle")}
+            </CardTitle>
             <CardDescription>
-              Menos candidatos disponíveis do que vagas.
+              {t("responses.atRiskDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-1">
@@ -101,10 +112,10 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
                 {i > 0 ? <Separator /> : null}
                 <div className="flex items-center gap-3 py-2 text-sm">
                   <span className="shrink-0 tabular-nums">
-                    {formatShortDate(ev.starts_at, detail.timezone)}
+                    {df.shortDate(ev.starts_at)}
                   </span>
                   <span className="shrink-0 tabular-nums text-muted-foreground">
-                    {formatTime(ev.starts_at, detail.timezone)}
+                    {df.time(ev.starts_at)}
                   </span>
                   <span className="min-w-0 flex-1 truncate">
                     {ev.location.name}
@@ -123,10 +134,10 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
         <CardHeader className="flex flex-row items-start justify-between gap-2">
           <div>
             <CardTitle className="text-base">
-              Faltam responder ({pending.length})
+              {t("responses.pendingTitle", { count: pending.length })}
             </CardTitle>
             <CardDescription>
-              Cobre no grupo com a mensagem pronta.
+              {t("responses.pendingDescription")}
             </CardDescription>
           </div>
           {pending.length ? (
@@ -134,19 +145,22 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
               size="sm"
               variant="outline"
               onClick={async () => {
-                const result = await shareOrCopy("Lembrete da escala", reminder);
-                if (result === "copied") toast.success("Mensagem copiada");
+                const result = await shareOrCopy(
+                  t("responses.reminderShareTitle"),
+                  reminder,
+                );
+                if (result === "copied") toast.success(t("messageCopied"));
               }}
             >
               <Copy className="h-4 w-4" />
-              Cobrar
+              {t("responses.remind")}
             </Button>
           ) : null}
         </CardHeader>
         <CardContent>
           {pending.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              Todo mundo respondeu. 🎉
+              {t("responses.allAnswered")}
             </p>
           ) : (
             <div className="flex flex-wrap gap-1.5">
@@ -163,10 +177,10 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Responderam ({answered.length})
+            {t("responses.answeredTitle", { count: answered.length })}
           </CardTitle>
           <CardDescription>
-            Quem deu poucas datas é quem mais limita a montagem.
+            {t("responses.answeredDescription")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
@@ -187,7 +201,7 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
                         : ""
                     }
                   >
-                    {count} {count === 1 ? "data" : "datas"}
+                    {t("responses.dateCount", { count })}
                   </Badge>
                 </div>
               </React.Fragment>
@@ -195,16 +209,19 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
           })}
           {answered.length === 0 ? (
             <p className="py-4 text-center text-sm text-muted-foreground">
-              Ninguém respondeu ainda.{" "}
-              <button
-                className="underline underline-offset-4"
-                onClick={() => {
-                  void copyToClipboard(fillUrl);
-                  toast.success("Link copiado");
-                }}
-              >
-                Copiar o link
-              </button>
+              {t.rich("responses.noAnswersYet", {
+                copy: (chunks) => (
+                  <button
+                    className="underline underline-offset-4"
+                    onClick={() => {
+                      void copyToClipboard(fillUrl);
+                      toast.success(t("linkCopied"));
+                    }}
+                  >
+                    {chunks}
+                  </button>
+                ),
+              })}
             </p>
           ) : null}
         </CardContent>
@@ -231,8 +248,8 @@ function StatTile({
         <Icon className={`h-5 w-5 shrink-0 ${color}`} />
         <div className="min-w-0">
           <p className={`text-xl font-semibold tabular-nums ${color}`}>{value}</p>
-          {/* Sem truncate: "Celebrações em risco" não cabe numa linha em
-              coluna estreita, e cortar o rótulo esconde a informação. */}
+          {/* No truncate: "Celebrations at risk" does not fit on one line in a
+              narrow column, and clipping the label hides the information. */}
           <p className="text-xs leading-tight text-balance text-muted-foreground">
             {label}
           </p>

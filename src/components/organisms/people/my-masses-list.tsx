@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   CalendarCheck2,
   Copy,
@@ -15,7 +16,7 @@ import { toast } from "sonner";
 import {
   cancelSwapAction,
   requestSwapAction,
-} from "@/app/(app)/escalas/actions";
+} from "@/app/(app)/schedules/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,9 +27,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useErrorMessage, useResultError } from "@/hooks/use-error-message";
 import { appUrlClient, copyToClipboard, whatsAppUrl } from "@/lib/client-utils";
 import { cn } from "@/lib/utils";
 
+/**
+ * A Mass with its dates already written out.
+ *
+ * The page formats them on the server, where the parish's time zone lives, so
+ * this component only ever lays text out.
+ */
 export interface MyMassRow {
   assignmentId: string;
   eventId: string;
@@ -46,6 +54,7 @@ export interface MyMassRow {
 }
 
 export function MyMassesList({ masses }: { masses: MyMassRow[] }) {
+  const t = useTranslations("myMasses");
   const [target, setTarget] = React.useState<MyMassRow | null>(null);
 
   if (masses.length === 0) {
@@ -54,8 +63,7 @@ export function MyMassesList({ masses }: { masses: MyMassRow[] }) {
         <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
           <CalendarCheck2 className="h-8 w-8 text-muted-foreground" />
           <p className="text-sm text-muted-foreground">
-            Nenhuma missa publicada pela frente. Quando a escala do próximo mês
-            sair, ela aparece aqui.
+            {t("list.emptyState")}
           </p>
         </CardContent>
       </Card>
@@ -73,7 +81,10 @@ export function MyMassesList({ masses }: { masses: MyMassRow[] }) {
 }
 
 function MassRow({ mass, onSwap }: { mass: MyMassRow; onSwap: () => void }) {
+  const t = useTranslations("myMasses");
+  const tCommon = useTranslations("common");
   const router = useRouter();
+  const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
 
   return (
@@ -101,8 +112,9 @@ function MassRow({ mass, onSwap }: { mass: MyMassRow; onSwap: () => void }) {
       </div>
 
       <p className="truncate text-xs text-muted-foreground">
-        {mass.whenLabel}
-        {mass.label ? ` · ${mass.label}` : ""}
+        {mass.label
+          ? t("list.whenWithLabel", { when: mass.whenLabel, label: mass.label })
+          : mass.whenLabel}
       </p>
 
       <div className="mt-2 flex flex-wrap gap-2">
@@ -113,11 +125,11 @@ function MassRow({ mass, onSwap }: { mass: MyMassRow; onSwap: () => void }) {
               variant="outline"
               onClick={() => {
                 void copyToClipboard(appUrlClient(`/t/${mass.swapToken}`));
-                toast.success("Link copiado");
+                toast.success(tCommon("copied"));
               }}
             >
               <Copy className="h-3.5 w-3.5" />
-              Copiar link do pedido
+              {t("list.copyLink")}
             </Button>
             <Button
               size="sm"
@@ -125,23 +137,25 @@ function MassRow({ mass, onSwap }: { mass: MyMassRow; onSwap: () => void }) {
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const res = await cancelSwapAction(mass.swapId!);
-                  if (!res.ok) toast.error(res.error);
-                  else {
-                    toast.success("Pedido cancelado");
-                    router.refresh();
+                  const result = await cancelSwapAction(mass.swapId!);
+                  const message = resultError(result);
+                  if (message) {
+                    toast.error(message);
+                    return;
                   }
+                  toast.success(t("toast.requestCancelled"));
+                  router.refresh();
                 })
               }
             >
               <X className="h-3.5 w-3.5" />
-              Cancelar pedido
+              {t("list.cancelRequest")}
             </Button>
           </>
         ) : (
           <Button size="sm" variant="outline" onClick={onSwap}>
             <Repeat2 className="h-3.5 w-3.5" />
-            Não vou conseguir
+            {t("list.cantMakeIt")}
           </Button>
         )}
       </div>
@@ -150,10 +164,10 @@ function MassRow({ mass, onSwap }: { mass: MyMassRow; onSwap: () => void }) {
 }
 
 /**
- * O diálogo fica montado e só alterna `open`. Remontá-lo ao abrir fazia ele
- * fechar sozinho: o `pointerup` do clique que o abriu chega depois da
- * montagem e o Radix o lê como clique fora. A key vai no corpo, que é quem
- * precisa nascer limpo a cada pedido.
+ * The dialog stays mounted and only toggles `open`. Remounting it on open made
+ * it close by itself: the `pointerup` of the click that opened it arrives
+ * after mount and Radix reads it as a click outside. The key goes on the body,
+ * which is the part that has to start clean for every request.
  */
 function SwapDialog({
   target,
@@ -174,19 +188,29 @@ function SwapDialog({
 }
 
 function SwapDialogBody({ target }: { target: MyMassRow }) {
+  const t = useTranslations("myMasses");
+  const tCommon = useTranslations("common");
   const router = useRouter();
+  // Not `useResultError` here: the success branch reads `result.data`, so the
+  // result has to be narrowed by `result.ok` rather than by the message.
+  const errorMessage = useErrorMessage();
   const [reason, setReason] = React.useState("");
   const [url, setUrl] = React.useState<string | null>(null);
   const [pending, startTransition] = React.useTransition();
 
+  const whenAt = t("whenAt", {
+    date: target.whenLabel,
+    time: target.timeLabel,
+  });
+
+  // The reason line only exists when the person wrote one, and the link only
+  // after the request is open - the filter drops whichever is still empty.
   const message = [
-    "🔄 *Preciso de substituição*",
-    "",
-    `${target.whenLabel} às ${target.timeLabel}`,
+    t("whatsApp.header"),
+    whenAt,
     target.locationName,
-    reason ? `Motivo: ${reason}` : "",
-    "",
-    "Quem puder assumir, é só abrir e confirmar:",
+    reason ? t("whatsApp.reason", { reason }) : "",
+    t("whatsApp.callToAction"),
     url ?? "",
   ]
     .filter(Boolean)
@@ -195,26 +219,22 @@ function SwapDialogBody({ target }: { target: MyMassRow }) {
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Pedir substituição</DialogTitle>
-        <DialogDescription>
-          {`${target.whenLabel} às ${target.timeLabel}`}
-        </DialogDescription>
+        <DialogTitle>{t("swapDialog.title")}</DialogTitle>
+        <DialogDescription>{whenAt}</DialogDescription>
       </DialogHeader>
 
       {url ? (
         <div className="space-y-3">
-          <p className="text-sm">
-            Pedido aberto. Quem clicar primeiro assume a vaga.
-          </p>
+          <p className="text-sm">{t("swapDialog.opened")}</p>
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-2">
             <code className="min-w-0 flex-1 truncate text-xs">{url}</code>
             <Button
               size="icon"
               variant="ghost"
-              aria-label="Copiar link"
+              aria-label={t("swapDialog.copyLinkLabel")}
               onClick={() => {
                 void copyToClipboard(url);
-                toast.success("Link copiado");
+                toast.success(tCommon("copied"));
               }}
             >
               <Copy className="h-4 w-4" />
@@ -227,7 +247,7 @@ function SwapDialogBody({ target }: { target: MyMassRow }) {
               rel="noopener noreferrer"
             >
               <MessageCircle className="h-4 w-4" />
-              Mandar no WhatsApp
+              {tCommon("shareOnWhatsApp")}
             </a>
           </Button>
         </div>
@@ -238,7 +258,7 @@ function SwapDialogBody({ target }: { target: MyMassRow }) {
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             maxLength={280}
-            placeholder="Motivo (opcional)"
+            placeholder={t("swapDialog.reasonPlaceholder")}
             className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
           />
           <Button
@@ -246,24 +266,24 @@ function SwapDialogBody({ target }: { target: MyMassRow }) {
             disabled={pending}
             onClick={() =>
               startTransition(async () => {
-                const res = await requestSwapAction({
+                const result = await requestSwapAction({
                   assignmentId: target.assignmentId,
                   reason: reason.trim() || undefined,
                 });
-                if (!res.ok) {
-                  toast.error(res.error);
+                if (!result.ok) {
+                  toast.error(errorMessage(result.code, result.params));
                   return;
                 }
-                setUrl(res.data!.url);
+                setUrl(result.data!.url);
                 router.refresh();
               })
             }
           >
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Abrir pedido
+            {t("swapDialog.submit")}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Quem marcou disponibilidade para esse horário recebe um aviso.
+            {t("swapDialog.notice")}
           </p>
         </div>
       )}

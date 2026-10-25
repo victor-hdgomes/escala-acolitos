@@ -1,11 +1,11 @@
 /**
- * Leitura do relógio isolada num módulo próprio.
+ * Reading the clock, isolated in a module of its own.
  *
- * Server Components legitimamente leem a hora durante a renderização — cada
- * request é uma renderização nova. As regras do React Compiler tratam
- * `Date.now()` no corpo de um componente como impureza, então a chamada mora
- * aqui e os componentes pedem a hora por função nomeada, o que também deixa
- * explícito onde o tempo entra no cálculo.
+ * Server Components legitimately read the time while rendering - every request
+ * is a fresh render. The React Compiler rules treat `Date.now()` in a component
+ * body as impure, so the call lives here and components ask for the time
+ * through a named function, which also makes it explicit where time enters the
+ * calculation.
  */
 
 export function nowMs(): number {
@@ -16,7 +16,7 @@ export function nowDate(): Date {
   return new Date(nowMs());
 }
 
-/** Instante daqui a `days` dias — usado pelo lembrete de véspera. */
+/** The instant `days` days from now - used by the eve-of reminder. */
 export function daysFromNow(days: number): Date {
   return new Date(nowMs() + days * 86_400_000);
 }

@@ -3,13 +3,20 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { authErrorMessage, fail, ok, type ActionResult } from "@/lib/action-result";
+import {
+  ERROR_CODES,
+  authErrorCode,
+  fail,
+  ok,
+  zodErrorCode,
+  type ActionResult,
+} from "@/lib/action-result";
 import { appUrl } from "@/lib/public-access";
 import { createClient } from "@/lib/supabase/server";
 
 const credentials = z.object({
-  email: z.string().email("E-mail inválido."),
-  password: z.string().min(6, "A senha precisa ter pelo menos 6 caracteres."),
+  email: z.string().email(ERROR_CODES.INVALID_EMAIL),
+  password: z.string().min(6, ERROR_CODES.PASSWORD_TOO_SHORT),
 });
 
 export async function signInAction(
@@ -20,16 +27,16 @@ export async function signInAction(
     email: formData.get("email"),
     password: formData.get("password"),
   });
-  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  if (!parsed.success) return fail(zodErrorCode(parsed.error.issues[0].message));
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
-  if (error) return fail(authErrorMessage(error.message));
+  if (error) return fail(authErrorCode(error.message));
 
-  const redirectTo = String(formData.get("redirect") || "/inicio");
-  // Só caminho interno: um `redirect` vindo da query não pode mandar o
-  // usuário para fora do app depois de autenticado.
-  redirect(redirectTo.startsWith("/") ? redirectTo : "/inicio");
+  const redirectTo = String(formData.get("redirect") || "/home");
+  // Internal paths only: a `redirect` arriving from the query string must not
+  // send the user out of the app once they are authenticated.
+  redirect(redirectTo.startsWith("/") ? redirectTo : "/home");
 }
 
 export async function signUpAction(
@@ -37,13 +44,15 @@ export async function signUpAction(
   formData: FormData,
 ): Promise<ActionResult> {
   const parsed = credentials
-    .extend({ displayName: z.string().trim().min(2, "Diga seu nome.") })
+    .extend({
+      displayName: z.string().trim().min(2, ERROR_CODES.DISPLAY_NAME_REQUIRED),
+    })
     .safeParse({
       email: formData.get("email"),
       password: formData.get("password"),
       displayName: formData.get("displayName"),
     });
-  if (!parsed.success) return fail(parsed.error.issues[0].message);
+  if (!parsed.success) return fail(zodErrorCode(parsed.error.issues[0].message));
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
@@ -54,10 +63,14 @@ export async function signUpAction(
       emailRedirectTo: appUrl("/auth/callback"),
     },
   });
-  if (error) return fail(authErrorMessage(error.message));
+  if (error) return fail(authErrorCode(error.message));
 
+  // Whichever way in they arrived on, sign-up hands them straight back to
+  // it: the group link, the named invitation, or the waiting screen.
   const invite = String(formData.get("invite") || "");
-  redirect(invite ? `/convite/${invite}` : "/inicio");
+  if (invite) redirect(`/invite/${invite}`);
+  const join = String(formData.get("join") || "");
+  redirect(join ? `/j/${join}` : "/home");
 }
 
 export async function signOutAction() {
@@ -72,14 +85,14 @@ export async function forgotPasswordAction(
 ): Promise<ActionResult> {
   const email = String(formData.get("email") || "").trim();
   if (!z.string().email().safeParse(email).success) {
-    return fail("E-mail inválido.");
+    return fail(ERROR_CODES.INVALID_EMAIL);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: appUrl("/auth/callback?next=/reset-password"),
   });
-  if (error) return fail(authErrorMessage(error.message));
+  if (error) return fail(authErrorCode(error.message));
   return ok();
 }
 
@@ -89,14 +102,14 @@ export async function resetPasswordAction(
 ): Promise<ActionResult> {
   const password = String(formData.get("password") || "");
   if (password.length < 6) {
-    return fail("A senha precisa ter pelo menos 6 caracteres.");
+    return fail(ERROR_CODES.PASSWORD_TOO_SHORT);
   }
   if (password !== String(formData.get("confirm") || "")) {
-    return fail("As senhas não coincidem.");
+    return fail(ERROR_CODES.PASSWORDS_DO_NOT_MATCH);
   }
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password });
-  if (error) return fail(authErrorMessage(error.message));
-  redirect("/inicio");
+  if (error) return fail(authErrorCode(error.message));
+  redirect("/home");
 }

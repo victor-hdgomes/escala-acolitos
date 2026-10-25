@@ -38,11 +38,11 @@ export function ThemeProvider({
   const [resolvedTheme, setResolvedTheme] =
     React.useState<"light" | "dark">("dark");
 
-  // Na montagem: lê a preferência salva e aplica. O localStorage não existe no
-  // servidor, então esta leitura não pode acontecer na renderização.
+  // On mount: read the saved preference and apply it. localStorage does not
+  // exist on the server, so this read cannot happen during rendering.
   React.useEffect(() => {
     const stored = (localStorage.getItem(STORAGE_KEY) as Theme | null) ?? defaultTheme;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- storage é sistema externo
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- storage is an external system
     setThemeState(stored);
     const resolved = stored === "system" ? getSystemTheme() : stored;
     setResolvedTheme(resolved);
@@ -85,9 +85,10 @@ export function useTheme() {
 }
 
 /**
- * Inline script para prevenir FOUC: roda antes do React montar e aplica
- * o tema correto no <html>. Renderizado no <head> via dangerouslySetInnerHTML
- * para ficar fora da árvore React (evita warning do React 19).
+ * Inline script that prevents the flash of the wrong theme: it runs before
+ * React mounts and puts the right class on <html>. Rendered into <head> with
+ * dangerouslySetInnerHTML so it stays outside the React tree, which is what
+ * keeps React 19 from warning about it.
  */
 export const themeBootstrapScript = `
 (function(){

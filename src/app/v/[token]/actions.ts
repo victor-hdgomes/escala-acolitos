@@ -1,21 +1,24 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 
-import { fail, ok, type ActionResult } from "@/lib/action-result";
+import { ERROR_CODES, fail, ok, type ActionResult } from "@/lib/action-result";
 import { logAudit } from "@/lib/audit";
 import { swapOpenedEmail } from "@/lib/mail/templates";
 import { sendMail } from "@/lib/mail/send";
 import { appUrl, canActAsPerson, resolveViewToken } from "@/lib/public-access";
+import { getDateFormatter } from "@/lib/server-date";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Pedido de substituição a partir da escala publicada — sem login.
+ * Asking for cover straight from the published schedule - no sign-in.
  *
- * É a primeira dor depois da escala pronta: "alguém me substitui amanhã às
- * 10h?". Exigir conta aqui jogaria o pedido de volta para o grupo do WhatsApp.
+ * It is the first thing that hurts once the schedule is out: "can anyone cover
+ * for me tomorrow at 10?". Requiring an account here would push the request
+ * back into the WhatsApp group.
  */
 export async function requestSwapPublicAction(input: {
   token: string;
@@ -29,10 +32,10 @@ export async function requestSwapPublicAction(input: {
       reason: z.string().trim().max(280).optional(),
     })
     .safeParse(input);
-  if (!parsed.success) return fail("Pedido inválido.");
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
 
   const ctx = await resolveViewToken(parsed.data.token);
-  if (!ctx) return fail("Link inválido.");
+  if (!ctx) return fail(ERROR_CODES.INVALID_LINK);
 
   const event = ctx.detail.days
     .flatMap((d) => d.events)
@@ -40,9 +43,9 @@ export async function requestSwapPublicAction(input: {
   const slot = event?.slotsView.find(
     (s) => s.assignmentId === parsed.data.assignmentId,
   );
-  if (!event || !slot?.person) return fail("Escalação não encontrada.");
+  if (!event || !slot?.person) return fail(ERROR_CODES.SLOT_DOES_NOT_EXIST);
   if (Date.parse(event.starts_at) < Date.now()) {
-    return fail("Essa celebração já passou.");
+    return fail(ERROR_CODES.SWAP_IN_THE_PAST);
   }
 
   const supabase = await createClient();
@@ -50,7 +53,7 @@ export async function requestSwapPublicAction(input: {
     data: { user },
   } = await supabase.auth.getUser();
   if (!canActAsPerson(slot.person, user?.id ?? null)) {
-    return fail("Esse nome está vinculado a uma conta. Entre com ela.");
+    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
 
   const admin = createAdminClient();
@@ -71,7 +74,7 @@ export async function requestSwapPublicAction(input: {
     })
     .select("token")
     .single();
-  if (error || !swap) return fail("Não foi possível abrir o pedido.");
+  if (error || !swap) return fail(ERROR_CODES.SWAP_OPEN_FAILED);
 
   await admin
     .from("assignments")
@@ -103,7 +106,7 @@ export async function requestSwapPublicAction(input: {
   return ok({ url: appUrl(`/t/${swap.token}`) });
 }
 
-/** Avisa por e-mail quem marcou disponibilidade para aquela celebração. */
+/** Emails everyone who marked availability for that celebration. */
 async function notifyCandidates({
   parishId,
   timezone,
@@ -150,6 +153,10 @@ async function notifyCandidates({
     : { data: [] };
   const emailByUser = new Map((profiles ?? []).map((p) => [p.id, p.email]));
 
+  const [t, df] = await Promise.all([
+    getTranslations("emails"),
+    getDateFormatter(timezone),
+  ]);
   const url = appUrl(`/t/${swapToken}`);
   for (const person of people ?? []) {
     const to = person.claimed_by
@@ -158,11 +165,12 @@ async function notifyCandidates({
     if (!to) continue;
 
     const mail = swapOpenedEmail({
+      t,
+      df,
       personName: person.full_name,
       requesterName,
       starts_at: startsAt,
       locationName,
-      timezone,
       url,
       reason,
     });

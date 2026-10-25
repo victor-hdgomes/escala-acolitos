@@ -7,7 +7,23 @@ import type {
   SignupMode,
 } from "@/lib/db/types";
 
-/** Pessoa como aparece numa lista — o mínimo para renderizar e ordenar. */
+/** Values interpolated into a translated message. */
+export type TranslationValues = Record<string, string | number | Date>;
+
+/**
+ * A translator handed to the builders that compose text.
+ *
+ * WhatsApp messages, e-mails and the CSV export are assembled in plain
+ * functions that have no hook and no request behind them, so the caller - a
+ * client component with `useTranslations`, a Server Component with
+ * `getTranslations`, or the reminder cron with the recipient's locale - binds
+ * the namespace and passes the result down. Structural on purpose: it is the
+ * smallest shape that both next-intl translators satisfy, and it keeps these
+ * builders testable with a one-line stub.
+ */
+export type Translate = (key: string, values?: TranslationValues) => string;
+
+/** A person as they appear in a list - the minimum needed to render and sort. */
 export interface PersonLite {
   id: string;
   full_name: string;
@@ -28,7 +44,7 @@ export interface SlotView {
   position: number;
   assignmentId: string | null;
   person: PersonLite | null;
-  /** Substituição aberta nesta vaga. */
+  /** A swap opened on this slot. */
   swap: { id: string; token: string; reason: string | null } | null;
 }
 
@@ -41,14 +57,14 @@ export interface EventView {
   slots: number;
   location: LocationLite;
   slotsView: SlotView[];
-  /** Quem marcou disponibilidade (só carregado nas telas de coordenação). */
+  /** Who marked availability (only loaded on the coordination screens). */
   availablePeople: PersonLite[];
 }
 
 export interface DayGroup {
   key: string; // "2026-11-08"
-  label: string; // "08 de novembro"
-  weekday: string; // "Domingo"
+  label: string; // "08 November"
+  weekday: string; // "Sunday"
   events: EventView[];
 }
 
@@ -59,7 +75,7 @@ export interface ScheduleDetail {
   days: DayGroup[];
 }
 
-/** Evento ainda não gravado, gerado a partir da grade semanal. */
+/** An event not yet stored, generated from the weekly grid. */
 export interface EventDraft {
   location_id: string;
   starts_at: string;

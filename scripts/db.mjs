@@ -1,15 +1,15 @@
 /**
- * Aplica o schema no Supabase e prepara o primeiro acesso.
+ * Applies the schema to Supabase and prepares the first sign-in.
  *
- * Usa conexão direta ao Postgres porque DDL não passa pela API REST. A string
- * vem de SUPABASE_DB_URL no .env.local (Dashboard → Connect → Connection
- * string → URI) e nunca é impressa.
+ * Connects straight to Postgres, because DDL does not go through the REST
+ * API. The connection string comes from SUPABASE_DB_URL in .env.local
+ * (Dashboard, Connect, Connection string, URI) and is never printed.
  *
- *   node scripts/db.mjs migrate            aplica supabase/migrations/*.sql
- *   node scripts/db.mjs seed               aplica supabase/seed.sql
+ *   node scripts/db.mjs migrate            applies supabase/migrations/*.sql
+ *   node scripts/db.mjs seed               applies supabase/seed.sql
  *   node scripts/db.mjs setup              migrate + seed
- *   node scripts/db.mjs grant <email>      vira admin do grupo + superadmin
- *   node scripts/db.mjs status             o que já existe no banco
+ *   node scripts/db.mjs grant <email>      group admin plus superadmin
+ *   node scripts/db.mjs status             what the database already has
  */
 
 import fs from "node:fs";
@@ -36,12 +36,12 @@ async function connect() {
   if (!url) {
     console.error(
       [
-        "Falta SUPABASE_DB_URL no .env.local.",
+        "SUPABASE_DB_URL is missing from .env.local.",
         "",
-        "No painel do Supabase: Connect → Connection string → URI.",
-        "Cole a linha inteira (ela já inclui a senha do banco):",
+        "In the Supabase dashboard: Connect, Connection string, URI.",
+        "Paste the whole line (it already carries the database password):",
         "",
-        "  SUPABASE_DB_URL=postgresql://postgres.xxxx:SENHA@aws-...pooler.supabase.com:5432/postgres",
+        "  SUPABASE_DB_URL=postgresql://postgres.xxxx:PASSWORD@aws-...pooler.supabase.com:5432/postgres",
       ].join("\n"),
     );
     process.exit(1);
@@ -72,8 +72,9 @@ async function seed(client) {
 }
 
 /**
- * Liga a conta ao grupo e marca superadmin. Sem isso o usuário recém-criado
- * não pertence a grupo nenhum e o app o manda criar um.
+ * Puts the account in the group and marks it superadmin. Without this a
+ * brand-new account belongs to no group and the app sends it to the waiting
+ * screen.
  */
 async function grant(client, email) {
   const { rows: users } = await client.query(
@@ -81,7 +82,7 @@ async function grant(client, email) {
     [email],
   );
   if (!users.length) {
-    console.error(`Nenhuma conta com o e-mail ${email}. Cadastre-se em /signup primeiro.`);
+    console.error(`No account with the address ${email}. Sign up at /signup first.`);
     process.exit(1);
   }
   const userId = users[0].id;
@@ -90,7 +91,7 @@ async function grant(client, email) {
     "select id, name from public.parishes order by created_at limit 1",
   );
   if (!parishes.length) {
-    console.error("Nenhum grupo no banco. Rode `node scripts/db.mjs seed` ou crie um pelo app.");
+    console.error("No group in the database. Run `node scripts/db.mjs seed`, or open one in the app.");
     process.exit(1);
   }
 
@@ -104,7 +105,7 @@ async function grant(client, email) {
     "update public.profiles set is_superadmin = true where id = $1",
     [userId],
   );
-  console.log(`✓ ${email} é admin de "${parishes[0].name}" e superadmin.`);
+  console.log(`✓ ${email} now administers "${parishes[0].name}" and is the superadmin.`);
 }
 
 async function status(client) {
@@ -125,7 +126,7 @@ async function status(client) {
       const { rows } = await client.query(`select count(*)::int as n from public.${t}`);
       console.log(`${t.padEnd(16)} ${rows[0].n}`);
     } catch {
-      console.log(`${t.padEnd(16)} — não existe`);
+      console.log(`${t.padEnd(16)} - does not exist`);
     }
   }
 }
@@ -141,7 +142,7 @@ try {
     await migrate(client);
     await seed(client);
   } else if (command === "grant") {
-    if (!arg) throw new Error("Informe o e-mail: node scripts/db.mjs grant voce@exemplo.com");
+    if (!arg) throw new Error("Give the address: node scripts/db.mjs grant you@example.com");
     await grant(client, arg);
   } else if (command === "status") await status(client);
   else {

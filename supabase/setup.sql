@@ -1,40 +1,39 @@
--- ============================================================================
--- Escala de Acólitos — setup completo
+------------------------------------------------------------------------------
+-- Altar Roster - complete setup
 --
--- Cole este arquivo inteiro no SQL Editor do Supabase e rode uma vez.
--- Contém:
---   • 0001_init.sql
---   • 0002_restrict_parish_creation.sql
---   • 0003_schedule_kind.sql
---   • o seed da Paróquia Cristo Rei: 7 locais, a grade semanal e os
---     54 acólitos da escala de outubro (seed.sql)
+-- GENERATED FILE. Do not edit by hand: run `npm run db:setup` instead.
+-- Source: supabase/migrations/*.sql
 --
--- Depois disto: crie sua conta em /signup e rode `supabase/grant-admin.sql`.
--- ============================================================================
-
-
--- ==========================================================================
+-- Paste the whole file into the Supabase SQL editor and run it once. It is
+-- safe to run again: every statement is written to be idempotent.
+--
+-- Afterwards: create your account at /signup, then run
+-- supabase/grant-admin.sql to make it the superadmin.
+------------------------------------------------------------------------------
+------------------------------------------------------------------------------
 -- 0001_init.sql
--- ==========================================================================
-
--- Escala de Acólitos — schema inicial
+------------------------------------------------------------------------------
+-- Altar Roster - initial schema
 --
--- Dois mundos convivem aqui:
---   1. Área logada (coordenação/admin) — isolada por RLS via auth.uid().
---   2. Link público (formulário, escala publicada, substituição) — RLS NÃO
---      cobre acesso anônimo por token, então todo acesso público passa por
---      Server Action com a service role, que valida o token antes de escrever.
---      Nenhuma policy abaixo libera `anon`; isso é intencional.
+-- Two worlds live here:
+--   1. The signed-in area (coordination and administration), isolated by RLS
+--      through auth.uid().
+--   2. The public links (availability form, published schedule, cover
+--      request). RLS does NOT cover anonymous access by token, so every
+--      public path goes through a Server Action with the service role, which
+--      checks the token before writing anything. No policy below opens
+--      anything to `anon`, and that is deliberate.
 --
--- Multi-grupo: `parishes` é a raiz de tenancy. Uma conta pode participar de
--- vários grupos (paróquias, ministérios, outra cidade) com papel diferente em
--- cada um — por isso `memberships` é N:N e o app guarda qual grupo está ativo.
+-- Multi-group: `parishes` is the root of tenancy. One account can belong to
+-- several groups (parishes, ministries, another town) with a different role
+-- in each, which is why `memberships` is many-to-many and the app remembers
+-- which group is active.
 
 create extension if not exists "pgcrypto";
 
--- Token curto e URL-safe para os links públicos. 8 bytes = 64 bits: o
--- suficiente para não ser adivinhado, curto o bastante para caber numa
--- mensagem de WhatsApp sem quebrar linha.
+-- A short, URL-safe token for the public links. 8 bytes is 64 bits: enough
+-- not to be guessed, short enough to fit in a WhatsApp message without
+-- wrapping onto a second line.
 create or replace function public.gen_url_token()
 returns text language sql volatile as $$
   select encode(gen_random_bytes(8), 'hex');
@@ -65,15 +64,15 @@ create trigger parishes_touch before update on public.parishes
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- profiles (1:1 com auth.users)
+-- profiles (one per auth.users row)
 -- ============================================================
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   email text,
   theme text not null default 'dark',
-  -- Dono da instalação. Enxerga e administra todos os grupos. Marcado à mão
-  -- no banco — não existe tela que conceda isto, de propósito.
+  -- Owner of the installation. Sees and administers every group. Set by hand
+  -- in the database: no screen grants this, on purpose.
   is_superadmin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -103,7 +102,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ============================================================
--- memberships — papel do usuário na paróquia
+-- memberships - what an account is allowed to do in a group
 -- ============================================================
 create table if not exists public.memberships (
   id uuid primary key default gen_random_uuid(),
@@ -124,8 +123,8 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
--- Security definer: as policies das outras tabelas consultam memberships, e
--- sem isso a policy de memberships consultaria a si mesma (recursão infinita).
+-- Security definer: the other tables' policies read memberships, and without
+-- this the memberships policy would read itself, recursing forever.
 create or replace function public.current_role_in(p_parish uuid)
 returns text language sql stable security definer set search_path = public as $$
   select case
@@ -141,7 +140,7 @@ returns boolean language sql stable security definer set search_path = public as
   select public.current_role_in(p_parish) is not null;
 $$;
 
--- Coordenador e admin escrevem; admin manda em tudo.
+-- Coordinators and admins write; an admin decides everything.
 create or replace function public.can_manage(p_parish uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select public.current_role_in(p_parish) in ('admin', 'coordinator');
@@ -153,7 +152,7 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- ============================================================
--- locations — locais de celebração
+-- locations - where a celebration happens
 -- ============================================================
 create table if not exists public.locations (
   id uuid primary key default gen_random_uuid(),
@@ -170,19 +169,19 @@ create table if not exists public.locations (
 create index if not exists locations_parish_idx on public.locations(parish_id);
 
 -- ============================================================
--- people — a lista de acólitos. Existe sem conta.
+-- people - the altar servers list. A name exists without an account.
 -- ============================================================
 create table if not exists public.people (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   full_name text not null,
-  -- Como o nome aparece na escala ("MARIA EDUARDA LUCENA"). Quando null, usa full_name.
+  -- How the name reads on the schedule. Null falls back to full_name.
   short_name text,
   email text,
   phone text,
   active boolean not null default true,
-  -- Quando preenchido, só este usuário pode marcar disponibilidade ou assumir
-  -- vaga com este nome. É o que impede um colega de responder no seu lugar.
+  -- Once set, only this account marks availability or takes a slot under
+  -- this name. It is what stops someone answering in your place.
   claimed_by uuid references auth.users(id) on delete set null,
   claimed_at timestamptz,
   notes text,
@@ -191,7 +190,7 @@ create table if not exists public.people (
   unique (parish_id, full_name)
 );
 
--- Um usuário é uma pessoa só.
+-- One account, one name per group.
 create unique index if not exists people_claimed_by_uniq
   on public.people(claimed_by) where claimed_by is not null;
 create index if not exists people_parish_idx on public.people(parish_id);
@@ -201,15 +200,15 @@ create trigger people_touch before update on public.people
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- invites — entrada de novos membros/coordenadores num grupo
+-- invites - one named seat in a group, burnt on acceptance
 -- ============================================================
 create table if not exists public.invites (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   email text,
   role text not null check (role in ('admin', 'coordinator', 'member')),
-  -- Quando preenchido, aceitar o convite já vincula a conta a este acólito —
-  -- resolve cadastro e vínculo de nome num clique só.
+  -- Once set, accepting the invitation also links the account to this altar
+  -- server, settling the sign-up and the name link in one click.
   person_id uuid references public.people(id) on delete set null,
   token text not null unique default public.gen_url_token(),
   expires_at timestamptz not null default (now() + interval '14 days'),
@@ -222,13 +221,13 @@ create table if not exists public.invites (
 create index if not exists invites_parish_idx on public.invites(parish_id);
 
 -- ============================================================
--- mass_templates — a grade semanal fixa
+-- mass_templates - the week as it repeats
 -- ============================================================
 create table if not exists public.mass_templates (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   location_id uuid not null references public.locations(id) on delete cascade,
-  weekday int not null check (weekday between 0 and 6), -- 0 = domingo
+  weekday int not null check (weekday between 0 and 6), -- 0 = Sunday
   start_time time not null,
   slots int not null default 4 check (slots between 1 and 12),
   label text,
@@ -240,13 +239,13 @@ create table if not exists public.mass_templates (
 create index if not exists mass_templates_parish_idx on public.mass_templates(parish_id);
 
 -- ============================================================
--- schedules — a escala de um mês
+-- schedules - one month, or one devotion of its own
 -- ============================================================
 create table if not exists public.schedules (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   title text not null,
-  month date not null, -- sempre o dia 1 do mês de referência
+  month date not null, -- always the first day of the month it refers to
   status text not null default 'draft'
     check (status in ('draft', 'collecting', 'building', 'published', 'archived')),
   availability_deadline timestamptz,
@@ -266,17 +265,19 @@ create trigger schedules_touch before update on public.schedules
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- events — cada celebração dentro da escala
+-- events - each celebration inside a schedule
 -- ============================================================
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   schedule_id uuid not null references public.schedules(id) on delete cascade,
   location_id uuid not null references public.locations(id) on delete restrict,
   starts_at timestamptz not null,
-  label text, -- "3º dia da Novena em honra a Jesus Cristo Rei do Universo"
+  label text, -- "Day 3 - Novena in honour of Our Lady of Sorrows"
   kind text not null default 'mass' check (kind in ('mass', 'novena', 'special')),
-  -- 'availability' = acólito marca que pode, coordenador escala.
-  -- 'direct'       = acólito pega a vaga direto (modelo da novena no WhatsApp).
+  -- 'availability' = the altar server marks what they can do and the
+  --                   coordinator assigns.
+  -- 'direct'       = the altar server takes the slot themselves, the way a
+  --                   novena is claimed in the group chat.
   signup_mode text not null default 'availability'
     check (signup_mode in ('availability', 'direct')),
   slots int not null default 4 check (slots between 1 and 12),
@@ -288,7 +289,7 @@ create unique index if not exists events_slot_uniq
   on public.events(schedule_id, location_id, starts_at);
 
 -- ============================================================
--- availabilities — "posso servir nesta celebração"
+-- availabilities - "I can serve at this one"
 -- ============================================================
 create table if not exists public.availabilities (
   id uuid primary key default gen_random_uuid(),
@@ -303,7 +304,7 @@ create index if not exists availabilities_person_idx on public.availabilities(pe
 create index if not exists availabilities_event_idx on public.availabilities(event_id);
 
 -- ============================================================
--- assignments — a escala final
+-- assignments - the finished schedule
 -- ============================================================
 create table if not exists public.assignments (
   id uuid primary key default gen_random_uuid(),
@@ -327,7 +328,7 @@ create trigger assignments_touch before update on public.assignments
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- swap_requests — pedido de substituição
+-- swap_requests - asking for someone to cover
 -- ============================================================
 create table if not exists public.swap_requests (
   id uuid primary key default gen_random_uuid(),
@@ -341,12 +342,12 @@ create table if not exists public.swap_requests (
   created_at timestamptz not null default now()
 );
 
--- Um pedido aberto por vaga: evita dois links circulando para a mesma missa.
+-- One open request per slot, so two links never circulate for one Mass.
 create unique index if not exists swap_one_open_per_assignment
   on public.swap_requests(assignment_id) where status = 'open';
 
 -- ============================================================
--- email_log — idempotência de envio (o cron pode rodar duas vezes)
+-- email_log - sending exactly once (the cron may run twice)
 -- ============================================================
 create table if not exists public.email_log (
   id uuid primary key default gen_random_uuid(),
@@ -360,13 +361,13 @@ create table if not exists public.email_log (
 );
 
 -- ============================================================
--- audit_log — quem mexeu em quê. Crítico: há link público sem login.
+-- audit_log - who changed what. It matters: public links carry no sign-in.
 -- ============================================================
 create table if not exists public.audit_log (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid references public.parishes(id) on delete cascade,
   actor_user_id uuid references auth.users(id) on delete set null,
-  actor_label text, -- nome da pessoa quando a ação veio do link público
+  actor_label text, -- the person's name when the action came from a link
   action text not null,
   entity text,
   entity_id uuid,
@@ -395,34 +396,35 @@ alter table public.swap_requests  enable row level security;
 alter table public.email_log      enable row level security;
 alter table public.audit_log      enable row level security;
 
--- profiles: cada um o seu. `is_superadmin` nunca é editável pelo app — a
--- policy de update permite a linha, e a server action nunca manda esse campo.
+-- profiles: each account reads and writes its own row. `is_superadmin` is
+-- never editable from the app; migration 0005 is what enforces that.
 create policy profiles_select_own on public.profiles for select using (auth.uid() = id);
 create policy profiles_insert_own on public.profiles for insert with check (auth.uid() = id);
 create policy profiles_update_own on public.profiles for update using (auth.uid() = id);
 
--- parishes: membro lê; admin do grupo edita; qualquer conta cria um grupo novo
--- (e a server action a torna admin dele em seguida).
+-- parishes: a member reads; the group's admin edits; any account opens a new
+-- group (and the server action makes it the admin straight after).
 create policy parishes_select on public.parishes for select using (public.is_member(id));
 create policy parishes_insert on public.parishes for insert
   with check (auth.uid() is not null);
 create policy parishes_update on public.parishes for update using (public.is_admin(id));
 create policy parishes_delete on public.parishes for delete using (public.is_admin(id));
 
--- memberships: membro lê as do seu grupo, admin do grupo escreve.
+-- memberships: a member reads their own group's, the group's admin writes.
 create policy memberships_select on public.memberships for select using (public.is_member(parish_id));
 create policy memberships_insert on public.memberships for insert with check (public.is_admin(parish_id));
 create policy memberships_update on public.memberships for update using (public.is_admin(parish_id));
 create policy memberships_delete on public.memberships for delete using (public.is_admin(parish_id));
 
--- invites: só admin do grupo. Quem aceita chega sem membership ainda, então a
--- leitura por token roda na server action com service role.
+-- invites: the group's admin only. Whoever accepts arrives with no
+-- membership yet, so reading by token runs in the server action with the
+-- service role.
 create policy invites_select on public.invites for select using (public.is_admin(parish_id));
 create policy invites_write on public.invites for all
   using (public.is_admin(parish_id))
   with check (public.is_admin(parish_id));
 
--- Tabelas com parish_id direto: membro lê, quem gerencia escreve.
+-- Tables carrying parish_id directly: a member reads, a manager writes.
 do $$
 declare t text;
 begin
@@ -438,13 +440,14 @@ begin
   end loop;
 end $$;
 
--- Exceção: o próprio acólito logado vincula/desvincula o seu nome, sem ser
--- coordenador. A checagem de quem ele está vinculando fica na server action.
+-- One exception: a signed-in altar server links and unlinks their own name
+-- without being a coordinator. Which name they are claiming is checked in the
+-- server action.
 create policy people_claim_self on public.people for update
   using (public.is_member(parish_id) and (claimed_by is null or claimed_by = auth.uid()))
   with check (public.is_member(parish_id) and (claimed_by is null or claimed_by = auth.uid()));
 
--- events / availabilities / assignments: parish_id vem por join.
+-- events, availabilities and assignments reach parish_id through a join.
 create or replace function public.event_parish(p_event uuid)
 returns uuid language sql stable security definer set search_path = public as $$
   select s.parish_id from public.events e
@@ -485,135 +488,288 @@ create policy swap_write on public.swap_requests for all
                        where a.id = assignment_id
                          and public.can_manage(public.event_parish(a.event_id))));
 
--- Logs: só quem gerencia lê; escrita é sempre service role.
+-- Logs: only a manager reads; writing is always the service role.
 create policy email_log_select on public.email_log for select using (public.can_manage(parish_id));
 create policy audit_log_select on public.audit_log for select using (public.can_manage(parish_id));
 
-
--- ==========================================================================
+------------------------------------------------------------------------------
 -- 0002_restrict_parish_creation.sql
--- ==========================================================================
-
--- Só o dono da instalação cria grupos.
+------------------------------------------------------------------------------
+-- Only the owner of the installation opens groups.
 --
--- Antes, qualquer conta autenticada podia criar uma paróquia e virar admin
--- dela — bom para auto-atendimento, ruim aqui: quem entra por convite não
--- deve conseguir abrir grupos novos. Admin de paróquia continua mandando no
--- grupo dele; criar outro é só do superadmin.
+-- Until now any authenticated account could create a parish and become its
+-- admin. That is right for self-service and wrong here: someone who arrived
+-- through an invitation should not be able to open new groups. A parish admin
+-- still runs their own group; opening another is the superadmin's.
 --
--- Esta policy é defesa em profundidade: a criação roda por Server Action com
--- service role (o membership de admin precisa existir no mesmo instante em
--- que a paróquia nasce), e é lá que a checagem de verdade acontece.
+-- This policy is defence in depth. Creation runs in a Server Action with the
+-- service role, because the admin membership has to exist the instant the
+-- parish does, and that action is where the real check lives.
+--
+-- Superseded by 0004, which reopens creation to an account with no group at
+-- all. The rule here is kept for the history of why it was ever closed.
 
 drop policy if exists parishes_insert on public.parishes;
 
 create policy parishes_insert on public.parishes for insert
   with check (public.is_superadmin());
 
-
--- ==========================================================================
+------------------------------------------------------------------------------
 -- 0003_schedule_kind.sql
--- ==========================================================================
-
--- Escalas avulsas: uma novena pode ter escala própria, separada da do mês.
+------------------------------------------------------------------------------
+-- A novena can have a schedule of its own, apart from the month's.
 --
--- Na prática o ministério trata as duas como coisas diferentes: a escala
--- mensal sai da grade de missas, a novena é uma devoção com data própria,
--- vagas numeradas e link próprio no grupo. Forçar a novena para dentro da
--- escala do mês obrigava a abrir as duas ao mesmo tempo e misturava as
--- mensagens.
+-- The ministry already treats them as two different things: the monthly
+-- schedule comes out of the weekly Mass pattern, while a novena is a devotion
+-- with its own dates, its own numbered slots and its own link in the group
+-- chat. Forcing the novena inside the month's schedule meant opening both at
+-- once and mixing up the messages.
 --
--- `kind` só descreve a escala; o que muda o comportamento de preenchimento
--- continua sendo `events.signup_mode`.
+-- `kind` only describes the schedule. What changes how a celebration is
+-- filled is still `events.signup_mode`.
 
 alter table public.schedules
   add column if not exists kind text not null default 'monthly'
   check (kind in ('monthly', 'novena', 'special'));
 
--- Escalas que já existem são mensais.
+-- Schedules that already exist are monthly ones.
 update public.schedules set kind = 'monthly' where kind is null;
 
 create index if not exists schedules_parish_kind_idx
   on public.schedules(parish_id, kind, month desc);
 
+------------------------------------------------------------------------------
+-- 0004_self_service_signup.sql
+------------------------------------------------------------------------------
+-- Self-service: whoever arrives alone opens their own group.
+--
+-- 0002 restricted group creation to the superadmin, to stop an invited altar
+-- server from opening groups. That also shut the front door: a coordinator
+-- who gets the app's link in a WhatsApp group has to be able to register
+-- their own chapel without asking anyone for anything.
+--
+-- The rule that serves both cases looks at what the account already has:
+--   no group at all -> may open the first one (this is the way in)
+--   already in a group -> may not open another (the invited server stays out)
+--   superadmin -> always
+--
+-- Anyone who needs a second group asks the superadmin. That is rare enough
+-- not to deserve a screen, and it keeps the path to abuse narrow: a brand-new
+-- account can create one parish, not a factory of them.
 
--- ==========================================================================
--- SEED
--- ==========================================================================
+create or replace function public.has_any_membership()
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from public.memberships m where m.user_id = auth.uid()
+  );
+$$;
 
--- Seed — Paróquia Cristo Rei, Parque Atheneu.
--- Locais, grade semanal e a lista de acólitos tirada da escala de outubro.
--- Idempotente: pode rodar de novo sem duplicar.
+drop policy if exists parishes_insert on public.parishes;
+
+create policy parishes_insert on public.parishes for insert
+  with check (
+    auth.uid() is not null
+    and (public.is_superadmin() or not public.has_any_membership())
+  );
+
+-- Defence in depth, as in 0002: creation runs in a Server Action with the
+-- service role (the parish and its admin membership have to be born in the
+-- same instant), so this policy is not the real lock. That is in
+-- createParishAction.
+
+------------------------------------------------------------------------------
+-- 0005_lock_superadmin.sql
+------------------------------------------------------------------------------
+-- There is one superadmin, and nobody promotes themselves.
+--
+-- THE HOLE THIS CLOSES
+-- The `profiles_update_own` policy (0001) lets an account update its own
+-- `profiles` row with no restriction on columns, and `is_superadmin` lives in
+-- that row. The app never sends that field, but the API does not know that: a
+-- PATCH to /rest/v1/profiles?id=eq.<my-id> with {"is_superadmin": true},
+-- using the publishable key and the account's own token, was enough to start
+-- seeing EVERY parish (is_superadmin() unlocks current_role_in, and with it
+-- is_member, can_manage and is_admin across the whole schema).
+--
+-- That was a small risk in a one-parish installation. With self-service
+-- sign-up, where any stranger creates an account, it becomes the widest door
+-- in the system.
+--
+-- TWO LOCKS
+-- 1. A unique index: at most one row with is_superadmin true, ever. A second
+--    promotion fails in the database, whatever it comes from.
+-- 2. A trigger: an authenticated session that is not the superadmin cannot
+--    change the field, not even on its own row.
+--
+-- What can still change it: the service role and the SQL editor (where
+-- auth.uid() is null). Those are the server's and the database owner's paths,
+-- and they are how the superadmin is marked, on purpose. No screen grants it.
+
+-- 1. At most one superadmin in the whole installation.
+create unique index if not exists profiles_single_superadmin
+  on public.profiles ((true))
+  where is_superadmin;
+
+-- 2. Nobody promotes themselves, or demotes the superadmin.
+create or replace function public.guard_superadmin()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.is_superadmin is distinct from old.is_superadmin then
+    -- A null auth.uid() means the service role or the SQL editor: the
+    -- server's path, which is exactly how the superadmin is marked.
+    if auth.uid() is not null
+       and not coalesce(
+         (select p.is_superadmin from public.profiles p where p.id = auth.uid()),
+         false
+       )
+    then
+      raise exception
+        'is_superadmin can only be changed by the owner of the installation';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists profiles_guard_superadmin on public.profiles;
+create trigger profiles_guard_superadmin
+  before update on public.profiles
+  for each row execute function public.guard_superadmin();
+
+------------------------------------------------------------------------------
+-- 0006_access_and_joining.sql
+------------------------------------------------------------------------------
+-- How people get into a group, and who is allowed to answer a schedule.
+--
+-- Until now the only door was an invitation sent by an administrator, and any
+-- schedule link answered by whoever held it. Both are right for a ministry
+-- that already knows everyone, and both break down the moment the app is
+-- passed around: a volunteer who signs up on their own lands nowhere, and a
+-- coordinator who wants names tied to real accounts has no way to ask for it.
+--
+-- Three additions, each solving one half of that:
+--   1. `parishes.fill_access`  the group decides whether answering needs an
+--      account, or stays open to anyone holding the link.
+--   2. `profiles.join_code`    a short code the volunteer reads out to the
+--      coordinator, who looks it up and adds them. No directory to browse,
+--      no e-mail guessing: the person has to hand their own code over.
+--   3. `join_links`            a reusable link the coordinator posts once in
+--      the group chat. Whoever signs up through it is already in the group.
+
+-- ============================================================
+-- 1. Answering a schedule: open, or members only
+-- ============================================================
+alter table public.parishes
+  add column if not exists fill_access text not null default 'open';
 
 do $$
-declare
-  v_parish uuid;
-  v_san_damiano uuid;
-  v_sao_jorge uuid;
-  v_sao_jose uuid;
-  v_matriz uuid;
-  v_divino uuid;
-  v_aparecida uuid;
-  v_sao_francisco uuid;
-  v_name text;
 begin
-  insert into public.parishes (name, slug, timezone)
-  values ('Paróquia Cristo Rei — Parque Atheneu', 'cristo-rei', 'America/Sao_Paulo')
-  on conflict (slug) do update set name = excluded.name
-  returning id into v_parish;
+  if not exists (
+    select 1 from pg_constraint where conname = 'parishes_fill_access_check'
+  ) then
+    alter table public.parishes
+      add constraint parishes_fill_access_check
+      check (fill_access in ('open', 'members'));
+  end if;
+end
+$$;
 
-  -- ── Locais ────────────────────────────────────────────────────────────
-  insert into public.locations (parish_id, name, short_name, color, sort_order) values
-    (v_parish, 'Matriz de Cristo Rei',              'Matriz',        '#6366f1', 1),
-    (v_parish, 'Convento San Damiano',              'San Damiano',   '#0ea5e9', 2),
-    (v_parish, 'Capela São Jorge',                  'São Jorge',     '#f97316', 3),
-    (v_parish, 'Capela São José Operário',          'São José',      '#14b8a6', 4),
-    (v_parish, 'Capela Divino Pai Eterno',          'Divino',        '#a855f7', 5),
-    (v_parish, 'Capela Nossa Senhora Aparecida',    'Aparecida',     '#ec4899', 6),
-    (v_parish, 'Capela São Francisco de Assis',     'São Francisco', '#84cc16', 7)
-  on conflict (parish_id, name) do nothing;
+comment on column public.parishes.fill_access is
+  'open: anyone with the link answers. members: only accounts in this group.';
 
-  select id into v_matriz        from public.locations where parish_id = v_parish and name = 'Matriz de Cristo Rei';
-  select id into v_san_damiano   from public.locations where parish_id = v_parish and name = 'Convento San Damiano';
-  select id into v_sao_jorge     from public.locations where parish_id = v_parish and name = 'Capela São Jorge';
-  select id into v_sao_jose      from public.locations where parish_id = v_parish and name = 'Capela São José Operário';
-  select id into v_divino        from public.locations where parish_id = v_parish and name = 'Capela Divino Pai Eterno';
-  select id into v_aparecida     from public.locations where parish_id = v_parish and name = 'Capela Nossa Senhora Aparecida';
-  select id into v_sao_francisco from public.locations where parish_id = v_parish and name = 'Capela São Francisco de Assis';
+-- ============================================================
+-- 2. The code a volunteer hands to a coordinator
+-- ============================================================
 
-  -- ── Grade semanal (weekday: 0 = domingo) ──────────────────────────────
-  insert into public.mass_templates (parish_id, location_id, weekday, start_time, slots) values
-    (v_parish, v_san_damiano,   0, '08:00', 4),
-    (v_parish, v_sao_jorge,     0, '08:00', 4),
-    (v_parish, v_sao_jose,      0, '08:45', 3),
-    (v_parish, v_matriz,        0, '10:00', 5),
-    (v_parish, v_divino,        0, '18:00', 3),
-    (v_parish, v_matriz,        0, '19:30', 5),
-    (v_parish, v_divino,        2, '19:30', 2),
-    (v_parish, v_aparecida,     3, '19:30', 2),
-    (v_parish, v_aparecida,     4, '19:30', 2),
-    (v_parish, v_sao_francisco, 6, '19:00', 2)
-  on conflict (parish_id, location_id, weekday, start_time) do nothing;
-
-  -- ── Acólitos e ancilas ────────────────────────────────────────────────
-  foreach v_name in array array[
-    'Alexia Oliveira', 'Alice Almeida', 'Alice Teixeira', 'Alice Valentina',
-    'Amanda Sousa', 'Anna Gabriele', 'Anna Luísa', 'Bianca Cristina',
-    'Caio Eduardo', 'Carlos Eduardo', 'Clara Ribeiro', 'Davi Borges',
-    'Eduarda Fernandes', 'Emanuella Calixto', 'Emanuella Farias',
-    'Gabriel Vicente', 'Geovanna Costa', 'Gislayne Santos', 'Gustavo Casulo',
-    'Heloísa Gonçalves', 'Heloísa Oliveira', 'Isabella de Souza',
-    'Isadora Sales', 'Israel Macedo', 'João Batista', 'João Paulo Marques',
-    'João Victor', 'Karla Almeida', 'Lara Sophya', 'Livia Gonçalves',
-    'Livia Sophia Caldas', 'Luan Pereira', 'Lucas Rabelo', 'Luiz Gustavo',
-    'Marcela Muniz', 'Maria Eduarda Lucena', 'Maria Vitória', 'Mariana Rosa',
-    'Marielle Pereira', 'Miguel Alexandre', 'Milena Duarte', 'Mirella Pereira',
-    'Natalia Sampaio', 'Pedro Amâncio', 'Pedro Marques', 'Pietro Monteiro',
-    'Roger Barreto', 'Ronaldo Lucas', 'Sofia Moreira', 'Sthela Tavares',
-    'Victor Hugo', 'Vinicius Florindo', 'Vitória Rodrigues', 'Wilson Neto'
-  ] loop
-    insert into public.people (parish_id, full_name)
-    values (v_parish, v_name)
-    on conflict (parish_id, full_name) do nothing;
+-- No 0, O, 1 or I: this gets read out loud and typed by hand, often by
+-- someone reading it off a phone to someone else.
+create or replace function public.gen_join_code()
+returns text language plpgsql volatile
+security definer set search_path = public as $$
+declare
+  alphabet constant text := '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  candidate text;
+  i int;
+begin
+  loop
+    candidate := '';
+    for i in 1..8 loop
+      candidate := candidate
+        || substr(alphabet, 1 + floor(random() * length(alphabet))::int, 1);
+      if i = 4 then candidate := candidate || '-'; end if;
+    end loop;
+    exit when not exists (
+      select 1 from public.profiles p where p.join_code = candidate
+    );
   end loop;
-end $$;
+  return candidate;
+end;
+$$;
+
+alter table public.profiles
+  add column if not exists join_code text;
+
+update public.profiles set join_code = public.gen_join_code()
+  where join_code is null;
+
+alter table public.profiles
+  alter column join_code set default public.gen_join_code(),
+  alter column join_code set not null;
+
+create unique index if not exists profiles_join_code_key
+  on public.profiles(join_code);
+
+-- The code identifies an account to someone who was given it, so it must not
+-- be readable from anywhere else. `profiles_select_own` (0001) already limits
+-- reads to the account's own row; the coordinator's lookup runs server-side
+-- with the service role, in an action that first checks they manage the group.
+
+-- ============================================================
+-- 3. Reusable join links
+-- ============================================================
+-- Different from `invites`: an invite is one named seat, burnt on acceptance.
+-- A join link is posted once and used by everyone who shows up, which is what
+-- makes "here is our link, sign up and you are in" possible in a group chat.
+create table if not exists public.join_links (
+  id uuid primary key default gen_random_uuid(),
+  parish_id uuid not null references public.parishes(id) on delete cascade,
+  token text not null unique default public.gen_url_token(),
+  role text not null default 'member'
+    check (role in ('admin', 'coordinator', 'member')),
+  -- What the coordinator calls it, so several links can coexist: one for the
+  -- altar servers, one for the chapel down the road.
+  label text,
+  active boolean not null default true,
+  expires_at timestamptz,
+  -- Null means no ceiling. A number turns the link into a run of seats.
+  max_uses int check (max_uses is null or max_uses > 0),
+  uses int not null default 0,
+  created_by uuid references auth.users(id) on delete set null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists join_links_parish_idx
+  on public.join_links(parish_id);
+
+alter table public.join_links enable row level security;
+
+drop policy if exists join_links_select on public.join_links;
+create policy join_links_select on public.join_links for select
+  using (public.can_manage(parish_id));
+
+drop policy if exists join_links_insert on public.join_links;
+create policy join_links_insert on public.join_links for insert
+  with check (public.can_manage(parish_id));
+
+drop policy if exists join_links_update on public.join_links;
+create policy join_links_update on public.join_links for update
+  using (public.can_manage(parish_id));
+
+drop policy if exists join_links_delete on public.join_links;
+create policy join_links_delete on public.join_links for delete
+  using (public.can_manage(parish_id));
+
+-- Redeeming a link reads it from an account that is not in the group yet, so
+-- no policy above would let it through: that path runs with the service role,
+-- in `redeemJoinLinkAction`, which is also where expiry and the use count are
+-- checked. The policies here are for the screens that manage the links.

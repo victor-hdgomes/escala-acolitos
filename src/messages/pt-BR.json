@@ -1,0 +1,1126 @@
+{
+  "app": {
+    "name": "Escala de Acólitos",
+    "tagline": "A escala do ministério sem planilha, e sem perder nada no grupo."
+  },
+  "auth": {
+    "fields": {
+      "email": "E-mail",
+      "emailPlaceholder": "voce@exemplo.com",
+      "name": "Seu nome",
+      "namePlaceholder": "Ana Silva",
+      "password": "Senha",
+      "passwordConfirm": "Repita a senha"
+    },
+    "forgotPassword": {
+      "description": "Mandamos um link para você definir uma nova senha.",
+      "sent": "Se existir conta com esse e-mail, o link já está a caminho.",
+      "submit": "Enviar link",
+      "title": "Recuperar senha"
+    },
+    "resetPassword": {
+      "title": "Nova senha"
+    },
+    "signIn": {
+      "description": "Conta só é necessária para coordenar ou vincular seu nome. Para preencher a escala, use o link do grupo.",
+      "footer": {
+        "link": "Criar conta",
+        "prompt": "Não tem conta?"
+      },
+      "forgotPassword": "Esqueci a senha",
+      "submit": "Entrar",
+      "title": "Entrar"
+    },
+    "signUp": {
+      "description": "Com conta você vincula o seu nome, e aí ninguém marca disponibilidade no seu lugar.",
+      "footer": {
+        "link": "Entrar",
+        "prompt": "Já tem conta?"
+      },
+      "submit": "Criar conta",
+      "title": "Criar conta"
+    }
+  },
+  "common": {
+    "back": "Voltar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "copied": "Link copiado",
+    "copy": "Copiar",
+    "copyMessage": "Copiar mensagem",
+    "create": "Criar",
+    "delete": "Excluir",
+    "edit": "Editar",
+    "language": "Idioma",
+    "loading": "Carregando",
+    "new": "Novo",
+    "optional": "opcional",
+    "roles": {
+      "admin": "Administrador",
+      "coordinator": "Coordenador",
+      "member": "Acólito"
+    },
+    "save": "Salvar",
+    "search": "Buscar",
+    "share": "Compartilhar",
+    "shareOnWhatsApp": "Mandar no WhatsApp",
+    "today": "hoje",
+    "you": "você"
+  },
+  "emails": {
+    "invite": {
+      "body": "Seu acesso será de {role}.",
+      "cta": "Aceitar convite",
+      "expiry": "{days, plural, one {O convite vale por # dia.} other {O convite vale por # dias.}}",
+      "heading": "Você foi convidado(a) para {parish}",
+      "subject": "Convite para {parish}"
+    },
+    "layout": {
+      "footer": "Ministério de Acólitos · mensagem automática"
+    },
+    "massList": {
+      "empty": "Nenhuma celebração.",
+      "locationWithLabel": "{location} ({label})"
+    },
+    "reminder": {
+      "cta": "Ver a escala",
+      "heading": "{person}, lembrete da sua missa de amanhã",
+      "subject": "Você serve amanhã"
+    },
+    "schedulePublished": {
+      "cta": "Ver a escala completa",
+      "footer": "Se não puder em alguma data, peça substituição pelo próprio link.",
+      "heading": "Olá, {person}! A escala de {monthLower} saiu.",
+      "intro": "Você está escalado(a) em:",
+      "subject": "Suas missas de {monthLower}"
+    },
+    "swapFilled": {
+      "body": "{filledBy} assumiu a sua vaga de {when}, em {location}.",
+      "heading": "{person}, está resolvido",
+      "subject": "Sua substituição foi assumida"
+    },
+    "swapOpened": {
+      "body": "{requester} não vai conseguir servir {when}, em {location}.",
+      "cta": "Assumir esta vaga",
+      "heading": "{person}, alguém precisa de substituição",
+      "question": "Você marcou disponibilidade para esse horário. Pode assumir?",
+      "reason": "Motivo: {reason}",
+      "subject": "{requester} precisa de substituição"
+    },
+    "when": "{weekday}, {date} às {time}"
+  },
+  "errors": {
+    "ACCOUNT_ALREADY_MEMBER": "Esta conta já está no grupo.",
+    "ACCOUNT_NOT_FOUND": "Nenhuma conta corresponde a isso. Confira o código ou o e-mail.",
+    "ALREADY_IN_A_GROUP": "Sua conta já participa de um grupo. Para abrir outro, fale com quem administra o sistema.",
+    "ALREADY_IN_CELEBRATION": "Você já está servindo nesta celebração.",
+    "ASSIGN_FAILED": "Não conseguimos escalar essa pessoa.",
+    "AUTH_FAILED": "Não deu certo. Tente de novo.",
+    "AUTOFILL_FAILED": "Não conseguimos preencher essas vagas.",
+    "AVAILABILITY_SAVE_FAILED": "Não conseguimos salvar sua resposta.",
+    "CLAIM_SLOT_FAILED": "Não conseguimos dar essa vaga a você.",
+    "COORDINATOR_ASSIGNS_THIS": "Quem escala esta celebração é o coordenador.",
+    "DISPLAY_NAME_REQUIRED": "Diga o seu nome.",
+    "EMAIL_ALREADY_REGISTERED": "Já existe uma conta com esse e-mail.",
+    "EMAIL_NOT_CONFIRMED": "Confirme seu e-mail antes de entrar.",
+    "EVENT_DELETE_FAILED": "Não conseguimos excluir essa celebração.",
+    "EVENT_DUPLICATE": "Já existe uma celebração nesse local e horário.",
+    "EVENT_INVALID_DATE": "Essa data não é válida.",
+    "EVENT_INVALID_TIME": "Esse horário não é válido.",
+    "EVENT_LOCATION_REQUIRED": "Escolha onde é celebrada.",
+    "EVENT_NOT_FOUND": "Não encontramos essa celebração.",
+    "EVENT_SAVE_FAILED": "Não conseguimos salvar essa celebração.",
+    "FILL_CLOSED_DEADLINE": "O prazo desta escala já terminou.",
+    "FILL_CLOSED_STATUS": "Esta escala não está aberta para respostas.",
+    "FORBIDDEN": "Você não tem permissão para isso.",
+    "GROUP_CREATE_FAILED": "Não conseguimos criar o grupo. Tente de novo.",
+    "GROUP_NAME_TOO_SHORT": "Dê um nome à sua paróquia ou capela.",
+    "GROUP_SAVE_FAILED": "Não conseguimos salvar as alterações.",
+    "IMPORT_EMPTY": "Cole ao menos um nome.",
+    "IMPORT_FAILED": "Não conseguimos importar esses nomes.",
+    "IMPORT_TOO_MANY": "Até {max} nomes por vez.",
+    "INVALID_COLOR": "Essa cor não é válida.",
+    "INVALID_CREDENTIALS": "E-mail ou senha incorretos.",
+    "INVALID_EMAIL": "Esse e-mail não parece certo.",
+    "INVALID_LINK": "Este link não é válido.",
+    "INVALID_REQUEST": "Algo nesse formulário não estava certo.",
+    "INVALID_ROLE": "Esse papel não existe.",
+    "INVITE_ALREADY_USED": "Esse convite já foi usado.",
+    "INVITE_CREATE_FAILED": "Não conseguimos criar o convite.",
+    "INVITE_EXPIRED": "Esse convite expirou.",
+    "INVITE_NOT_FOUND": "Não encontramos esse convite.",
+    "INVITE_REVOKE_FAILED": "Não conseguimos revogar esse convite.",
+    "JOIN_CODE_REQUIRED": "Digite um código ou um e-mail.",
+    "JOIN_FAILED": "Não conseguimos colocar você no grupo.",
+    "JOIN_LINK_CREATE_FAILED": "Não conseguimos criar o link. Tente de novo.",
+    "JOIN_LINK_EXHAUSTED": "Este link já foi usado o número de vezes permitido.",
+    "JOIN_LINK_EXPIRED": "Este link venceu.",
+    "JOIN_LINK_INACTIVE": "Este link está pausado.",
+    "JOIN_LINK_NOT_FOUND": "Não encontramos este link.",
+    "JOIN_LINK_SAVE_FAILED": "Não conseguimos salvar a alteração do link.",
+    "LAST_ADMIN": "O grupo precisa de pelo menos um administrador.",
+    "LOCATION_DELETE_FAILED": "Não conseguimos excluir esse local.",
+    "LOCATION_DUPLICATE": "Já existe um local com esse nome.",
+    "LOCATION_IN_USE": "Este local já aparece em alguma escala. Desative-o em vez de excluir.",
+    "LOCATION_NAME_TOO_SHORT": "Dê um nome ao local.",
+    "LOCATION_SAVE_FAILED": "Não conseguimos salvar esse local.",
+    "MEMBER_REMOVE_FAILED": "Não conseguimos remover esse membro.",
+    "NAME_LOCKED_TO_ACCOUNT": "Esse nome está vinculado a uma conta. Entre com ela para continuar.",
+    "NOT_AUTHENTICATED": "Faça login primeiro.",
+    "NOT_A_MEMBER": "Você não participa desse grupo.",
+    "NOVENA_CREATE_FAILED": "Não conseguimos criar a novena.",
+    "NOVENA_DAYS_TAKEN": "Alguns desses dias já têm celebração nesse local e horário.",
+    "NOVENA_TITLE_REQUIRED": "Dê um nome à novena.",
+    "NO_VALID_CELEBRATION": "Nenhuma celebração válida foi selecionada.",
+    "PASSWORDS_DO_NOT_MATCH": "As senhas não coincidem.",
+    "PASSWORD_TOO_SHORT": "A senha precisa ter pelo menos 6 caracteres.",
+    "PERSON_ALREADY_CLAIMED": "Esse nome já está vinculado a outra conta.",
+    "PERSON_CLAIM_FAILED": "Não conseguimos vincular esse nome à sua conta.",
+    "PERSON_DELETE_FAILED": "Não conseguimos remover essa pessoa.",
+    "PERSON_DUPLICATE": "Já existe alguém com esse nome na lista.",
+    "PERSON_NAME_REQUIRED": "Digite o nome completo da pessoa.",
+    "PERSON_NOT_FOUND": "Não encontramos esse nome neste grupo.",
+    "PERSON_SAVE_FAILED": "Não conseguimos salvar essa pessoa.",
+    "PERSON_UNLINK_FAILED": "Não conseguimos desvincular essa conta.",
+    "RATE_LIMITED": "Muitas tentativas. Espere um minuto e tente de novo.",
+    "RELEASE_SLOT_FAILED": "Não conseguimos liberar essa vaga.",
+    "ROLE_CHANGE_FAILED": "Não conseguimos alterar esse papel.",
+    "SCHEDULE_CREATE_FAILED": "Não conseguimos criar a escala.",
+    "SCHEDULE_DELETE_FAILED": "Não conseguimos excluir a escala.",
+    "SCHEDULE_MONTH_REQUIRED": "Escolha o mês.",
+    "SCHEDULE_NOT_FOUND": "Não encontramos essa escala.",
+    "SCHEDULE_OTHER_GROUP": "Essa escala é de outro grupo.",
+    "SCHEDULE_PUBLISH_FAILED": "Não conseguimos publicar a escala.",
+    "SCHEDULE_SAVE_FAILED": "Não conseguimos salvar a escala.",
+    "SCHEDULE_STATUS_FAILED": "Não conseguimos mudar o status.",
+    "SCHEDULE_TITLE_TOO_SHORT": "Dê um título à escala.",
+    "SESSION_EXPIRED": "Sua sessão expirou. Entre de novo.",
+    "SLOT_DOES_NOT_EXIST": "Essa vaga não existe.",
+    "SLOT_TAKEN": "Alguém acabou de pegar essa vaga.",
+    "SWAP_ACCEPT_FAILED": "Não conseguimos dar essa vaga a você.",
+    "SWAP_ALREADY_FILLED": "Alguém já assumiu essa vaga.",
+    "SWAP_CANCELLED": "Esse pedido foi cancelado.",
+    "SWAP_IN_THE_PAST": "Essa celebração já passou.",
+    "SWAP_NOT_FOUND": "Não encontramos esse pedido.",
+    "SWAP_NOT_OPEN": "Esse pedido não está aberto.",
+    "SWAP_ONLY_OWN_MASS": "Você só pode pedir substituição da sua própria missa.",
+    "SWAP_ONLY_OWN_REQUEST": "Você só pode cancelar o seu próprio pedido.",
+    "SWAP_OPEN_FAILED": "Não conseguimos abrir o pedido.",
+    "SWAP_OWN_REQUEST": "Esse é o nome de quem pediu a substituição.",
+    "TEMPLATE_DELETE_FAILED": "Não conseguimos remover essa missa.",
+    "TEMPLATE_DUPLICATE": "Essa missa já está na sua grade semanal.",
+    "TEMPLATE_INVALID_TIME": "Esse horário não é válido.",
+    "TEMPLATE_LOCATION_REQUIRED": "Escolha onde essa missa é celebrada.",
+    "TEMPLATE_SAVE_FAILED": "Não conseguimos salvar essa missa.",
+    "UNASSIGN_FAILED": "Não conseguimos liberar essa vaga.",
+    "UNEXPECTED": "Algo deu errado. Tente de novo."
+  },
+  "fill": {
+    "autosaved": "salvo automaticamente",
+    "batch": {
+      "markAll": "{count, plural, one {Marcar # data} other {Marcar todas as # datas}}",
+      "markFiltered": "{count, plural, one {Marcar # data} other {Marcar as # datas}}",
+      "unmark": "{count, plural, one {Desmarcar # data} other {Desmarcar # datas}}"
+    },
+    "chooseNamePrompt": "Escolha o seu nome para começar.",
+    "closed": {
+      "deadline": "O prazo de preenchimento terminou. Fale com a coordenação.",
+      "deadlineOn": "O prazo de preenchimento terminou em {date}. Fale com a coordenação.",
+      "status": "Esta escala não está aberta para preenchimento."
+    },
+    "deadlineNotice": "Preenchimento até <strong>{date}</strong>",
+    "direct": {
+      "badge": "direto",
+      "leave": "sair",
+      "openSlot": "vaga livre",
+      "take": "pegar esta vaga"
+    },
+    "emptyFiltered": "Nenhuma celebração com esses filtros.",
+    "filters": {
+      "clear": "Limpar filtros",
+      "morning": "Manhã",
+      "night": "Noite",
+      "novena": "Novena",
+      "saturday": "Sábados",
+      "sunday": "Domingos",
+      "toggle": "Filtros",
+      "weekday": "Dias de semana"
+    },
+    "gate": {
+      "codeHelp": "Você está conectado, mas sua conta ainda não faz parte de {group}. Mande este código para quem organiza a escala.",
+      "description": "Em {group}, só quem faz parte do grupo responde a escala.",
+      "pendingCta": "Ver minhas opções",
+      "signInCta": "Já tenho conta",
+      "signUpCta": "Criar conta",
+      "title": "Só para o grupo"
+    },
+    "markedCount": "<strong>{count}</strong> {count, plural, one {data marcada} other {datas marcadas}}",
+    "metaTitle": "Preencher escala",
+    "personButton": {
+      "change": "trocar",
+      "empty": "Selecione o seu nome"
+    },
+    "personPicker": {
+      "description": "Selecione para marcar suas datas.",
+      "emptyState": "Nenhum nome encontrado. Fale com a coordenação para ser incluído.",
+      "lockedAria": "Vinculado a uma conta",
+      "lockedNote": "Nome com cadeado está vinculado a uma conta: só o dono marca.",
+      "title": "Qual é o seu nome?"
+    },
+    "toast": {
+      "marked": "{count, plural, one {# data marcada} other {# datas marcadas}}",
+      "slotReleased": "Vaga liberada",
+      "slotTaken": "Vaga confirmada",
+      "unmarked": "Datas desmarcadas"
+    }
+  },
+  "group": {
+    "addMember": {
+      "add": "Adicionar ao grupo",
+      "added": "{name} entrou no grupo",
+      "alreadyLinked": "Esta conta já tem um nome na lista.",
+      "alreadyMember": "Esta conta já está no grupo.",
+      "description": "Quem se cadastra sozinho vê um código na tela. Digite esse código aqui para adicionar a pessoa ao grupo.",
+      "find": "Buscar",
+      "noEmail": "Sem e-mail",
+      "personHelp": "Vincular a conta a um nome é o que permite a pessoa marcar as próprias datas e pedir substituição.",
+      "personLabel": "Nome na lista de acólitos",
+      "personNamePlaceholder": "Nome completo",
+      "personNew": "Cadastrar um nome novo",
+      "queryLabel": "Código ou e-mail",
+      "queryPlaceholder": "K7P4-R2MQ",
+      "roleLabel": "Função no grupo",
+      "title": "Adicionar pelo código"
+    },
+    "general": {
+      "accessLabel": "Quem pode responder a escala",
+      "accessMembers": "Só quem está neste grupo",
+      "accessMembersHelp": "Para responder é preciso ter conta neste grupo. Quem se cadastrar sozinho fica aguardando até você adicionar.",
+      "accessOpen": "Qualquer pessoa com o link",
+      "accessOpenHelp": "Não precisa de conta: quem abre o link escolhe o próprio nome e marca as datas. É o jeito mais fácil de começar.",
+      "description": "O fuso define o horário que todo mundo vê, inclusive quem abrir o link de outro estado.",
+      "nameLabel": "Nome",
+      "saved": "Grupo atualizado",
+      "slugLabel": "Identificador",
+      "timeZoneLabel": "Fuso horário",
+      "title": "Dados do grupo"
+    },
+    "joinLinks": {
+      "create": "Criar link",
+      "created": "Link criado e copiado",
+      "description": "Um link só, postado uma vez no grupo. Todo mundo que se cadastrar por ele já cai dentro do grupo.",
+      "exhausted": "Esgotado",
+      "expired": "Vencido",
+      "expiryField": "Vence em (dias)",
+      "expiryPlaceholder": "Nunca",
+      "labelField": "Nome do link",
+      "labelPlaceholder": "Acólitos 2026",
+      "maxUsesField": "Limite de pessoas",
+      "maxUsesPlaceholder": "Sem limite",
+      "pause": "Pausar este link",
+      "paused": "Pausado",
+      "resume": "Reativar este link",
+      "roleField": "Entram como",
+      "title": "Links de entrada",
+      "untitled": "Link de entrada",
+      "usedCapped": "{used} de {max} usados",
+      "usedUnlimited": "{used, plural, =0 {Ninguém usou ainda} one {# pessoa entrou} other {# pessoas entraram}}"
+    },
+    "locations": {
+      "activeToggle": "Ativo",
+      "add": "Novo",
+      "delete": "Excluir {name}",
+      "dialog": {
+        "colorLabel": "Cor",
+        "createTitle": "Novo local",
+        "description": "O nome aparece na escala; o apelido é usado onde falta espaço.",
+        "editTitle": "Editar local",
+        "nameLabel": "Nome",
+        "namePlaceholder": "Matriz de Santa Maria",
+        "shortNameLabel": "Apelido",
+        "shortNamePlaceholder": "Matriz",
+        "sortOrderLabel": "Ordem"
+      },
+      "edit": "Editar {name}",
+      "emptyState": "Nenhum local ainda. Comece pela matriz.",
+      "inactive": "inativo",
+      "title": "Locais ({count})"
+    },
+    "members": {
+      "invite": {
+        "created": "Convite criado. Link copiado.",
+        "description": "Gera um link de entrada. Com e-mail preenchido, o convite também é enviado.",
+        "emailLabel": "E-mail (opcional)",
+        "emailPlaceholder": "pessoa@exemplo.com",
+        "personHelp": "Ao aceitar, a conta já fica ligada a esse nome na escala.",
+        "personLabel": "Vincular ao acólito (opcional)",
+        "personPlaceholder": "Nenhum",
+        "roleLabel": "Papel",
+        "submit": "Gerar convite",
+        "title": "Convidar"
+      },
+      "list": {
+        "noEmail": "sem e-mail",
+        "remove": "Remover {name}",
+        "removed": "{name} saiu do grupo",
+        "roleUpdated": "Papel atualizado",
+        "title": "Membros ({count})"
+      },
+      "pending": {
+        "expired": "expirado",
+        "openLink": "Link aberto",
+        "revoke": "Revogar convite",
+        "title": "Convites pendentes ({count})"
+      }
+    },
+    "roleFieldLabel": "Papel",
+    "roleHelp": {
+      "admin": "Faz tudo: grupo, membros, locais, grade e escalas.",
+      "coordinator": "Cria e monta escalas. Não mexe na configuração do grupo.",
+      "member": "Vê a própria escala e pede substituição."
+    },
+    "roles": {
+      "admin": "Administrador",
+      "coordinator": "Coordenador",
+      "member": "Acólito"
+    },
+    "subtitle": "Quem administra, onde se celebra e qual é a grade da semana.",
+    "tabs": {
+      "general": "Geral",
+      "locations": "Locais",
+      "members": "Membros",
+      "templates": "Grade"
+    },
+    "templates": {
+      "add": "Nova",
+      "delete": "Excluir da grade",
+      "description": "É daqui que sai o mês inteiro quando você cria uma escala.",
+      "dialog": {
+        "createTitle": "Nova missa fixa",
+        "editTitle": "Editar missa fixa",
+        "locationLabel": "Local",
+        "noteLabel": "Observação (opcional)",
+        "notePlaceholder": "Missa das crianças",
+        "slotsLabel": "Vagas",
+        "timeLabel": "Hora",
+        "weekdayLabel": "Dia"
+      },
+      "edit": "Editar missa da grade",
+      "emptyState": "Grade vazia. Cadastre as missas fixas da semana.",
+      "slots": "{count, plural, one {# vaga} other {# vagas}}",
+      "title": "Grade semanal"
+    },
+    "title": "Grupo"
+  },
+  "home": {
+    "claimName": {
+      "choose": "Escolher meu nome",
+      "description": "Depois de vincular, só você marca disponibilidade com esse nome, e passa a receber os avisos por e-mail.",
+      "linked": "Nome vinculado",
+      "notFound": "Não achou seu nome? Peça à coordenação para incluir.",
+      "submit": "Vincular",
+      "title": "Vincular meu nome"
+    },
+    "emptyState": "Você não está escalado em nenhuma missa publicada.",
+    "greeting": "Olá, {name}",
+    "management": {
+      "deadline": "Prazo {date}",
+      "emptyState": "Nenhuma escala criada ainda.",
+      "lastSchedule": "Última escala: {month}",
+      "noDeadline": "Sem prazo definido",
+      "people": "Acólitos",
+      "schedules": "Escalas",
+      "stats": "Estatísticas",
+      "title": "Coordenação"
+    },
+    "nextMass": {
+      "placeWithLabel": "{place} · {label}",
+      "seeAll": "Ver todas as minhas missas",
+      "title": "Sua próxima missa",
+      "when": "{weekday}, {date} às {time}"
+    },
+    "swaps": {
+      "description": "Alguém do grupo não vai conseguir. Dá para assumir?",
+      "relativeOwn": "{relative} · seu pedido",
+      "title": "Precisam de substituição",
+      "when": "{weekday} · {time} · {place}"
+    },
+    "title": "Início"
+  },
+  "invite": {
+    "accept": "Aceitar convite",
+    "accepted": "Pronto! Você entrou no grupo.",
+    "invitedAs": "Você foi convidado(a) como <b>{role}</b>.",
+    "invitedAsWithPerson": "Você foi convidado(a) como <b>{role}</b>, vinculado ao nome <b>{name}</b>.",
+    "signInCta": "Já tenho conta",
+    "signUpCta": "Criar conta e aceitar",
+    "title": "Convite",
+    "unavailable": {
+      "action": "Ir para o login",
+      "description": "Este convite já foi usado ou expirou. Peça um novo a quem administra o grupo.",
+      "title": "Convite indisponível"
+    }
+  },
+  "join": {
+    "action": "Entrar neste grupo",
+    "invitedAs": "Você vai entrar como <b>{role}</b>.",
+    "joined": "Você entrou",
+    "signInCta": "Já tenho conta",
+    "signUpCta": "Criar conta e entrar",
+    "title": "Entrar no grupo",
+    "unavailable": {
+      "action": "Ir para o login",
+      "exhausted": "Este link já foi usado o número de vezes permitido.",
+      "expired": "Este link venceu. Peça um novo.",
+      "inactive": "Quem administra o grupo pausou este link.",
+      "notFound": "Não encontramos este link. Confira com quem te mandou.",
+      "title": "Este link não funciona"
+    }
+  },
+  "landing": {
+    "advantages": {
+      "items": [
+        {
+          "title": "Quais missas estão em falta.",
+          "body": "Uma vaga vazia fica coral até alguém entrar nela. Você vê os buracos do mês antes de o mês chegar."
+        },
+        {
+          "title": "Quem está devendo uma vez.",
+          "body": "As mesmas três pessoas sempre dizem sim, então as mesmas três pessoas sempre servem. Aqui a lista começa por quem serviu menos."
+        },
+        {
+          "title": "Quem parou de vir, sem avisar.",
+          "body": "Um acólito que não responde há três meses não parece um problema numa planilha. Aqui, parece."
+        },
+        {
+          "title": "Ninguém em dois lugares ao mesmo tempo.",
+          "body": "Quem já está naquela missa nem aparece para você. Quem está servindo em outro lugar naquele dia, inclusive na novena que acontece ao lado, é sinalizado antes de você colocar o nome."
+        }
+      ],
+      "title": "Quatro coisas que a planilha nunca ia te dizer."
+    },
+    "assemblyPreview": {
+      "caption": "Exemplo. Aqui aparecem os seus nomes e os seus números.",
+      "filled": [
+        "Ana Marques",
+        "João Pedro",
+        "Lucas Carvalho"
+      ],
+      "header": "Domingo 7h00 · Igreja Matriz · 4 acólitos",
+      "openSlot": "Vaga livre",
+      "suggestedLabel": "Sugeridos, nesta ordem",
+      "suggestions": [
+        {
+          "name": "Beatriz Lima",
+          "reason": "nenhuma missa este mês"
+        },
+        {
+          "name": "Rafael Souza",
+          "reason": "1 missa · também às 19h30",
+          "conflict": true
+        },
+        {
+          "name": "Marina Alves",
+          "reason": "não serve há 38 dias"
+        }
+      ]
+    },
+    "counters": {
+      "body": "Enquanto as pessoas ainda respondem, você vê três números: quantos responderam, quantos não responderam e quantas missas ainda não têm gente suficiente.",
+      "caption": "Exemplo de um mês. Aqui aparecem os seus números.",
+      "followUp": "Toque no último e vem a lista. Sábado, 19h, a capela: três acólitos necessários, um disponível. Aí você escreve para as oito pessoas que faltam em vez de para as cinquenta e quatro, e faz isso na terça em vez de no sábado à noite.",
+      "pendingLabel": "Faltam",
+      "pendingValue": "32",
+      "repliedLabel": "Responderam",
+      "repliedValue": "22",
+      "shortLabel": "Missas em falta",
+      "shortValue": "5",
+      "title": "O que o formulário nunca te disse"
+    },
+    "cta": {
+      "openApp": "Abrir minhas escalas",
+      "primary": "Cadastrar minha paróquia",
+      "signIn": "Entrar"
+    },
+    "faq": {
+      "items": [
+        {
+          "q": "Alguém precisa baixar alguma coisa?",
+          "a": "Não. Tudo acontece no navegador do celular, pelo link que você manda no grupo."
+        },
+        {
+          "q": "E o acólito que não tem celular?",
+          "a": "Você mesmo coloca. Na hora de montar, a lista mostra todo mundo, não só quem respondeu."
+        },
+        {
+          "q": "Temos mais de uma capela. Funciona?",
+          "a": "Sim. As capelas fazem parte da sua semana normal, e cada missa carrega a dela."
+        },
+        {
+          "q": "Dá para dois coordenarem juntos?",
+          "a": "Dá. Convide o outro coordenador e vocês trabalham nas mesmas escalas."
+        },
+        {
+          "q": "Nossa novena começa semana que vem. Posso usar só para ela?",
+          "a": "Pode. A novena pode ter escala própria, link próprio e prazo próprio, sem nenhuma escala mensal."
+        },
+        {
+          "q": "Já fui convidado para uma paróquia. Posso abrir a minha?",
+          "a": "Uma conta pertence a uma paróquia. Se você foi convidado para uma e precisa de outra, fale com quem administra o sistema."
+        }
+      ],
+      "title": "Dúvidas"
+    },
+    "final": {
+      "body": "Crie sua conta, dê o nome da sua paróquia e cadastre os horários de uma semana normal. Você pode ter o link no grupo na mesma noite.",
+      "passItOn": "Se isto for útil, mande esta página para o coordenador da paróquia vizinha. Foi assim que chegou até você.",
+      "reassurance": "Você não precisa mudar o ministério inteiro de uma vez. Experimente por um mês e veja quantas pessoas respondem.",
+      "title": "Comece por um mês."
+    },
+    "footer": {
+      "line": "Escala de Acólitos. Para ministérios de acólitos, sob a proteção de São Tarcísio."
+    },
+    "hero": {
+      "eyebrow": "De um coordenador para outro",
+      "headline": "Mande um link no grupo. Seus acólitos respondem pelo celular.",
+      "serverAside": "Você é acólito e recebeu um link? Aqui você não precisa de conta. Abra o link que seu coordenador mandou: ele vai direto para as suas missas.",
+      "subheadline": "Escala para ministérios de acólitos. Cadastre os horários de uma semana normal uma vez, abra o mês e mande um único link no grupo da paróquia. Seu pessoal marca as missas em que pode servir. Sem conta, sem senha, sem instalar nada.",
+      "support": "Suas capelas e os horários de uma semana normal entram uma vez só. Todo mês depois disso nasce deles."
+    },
+    "noAccount": {
+      "body": "Sem cadastro, sem senha, sem instalar, sem baixar. Eles abrem o link, acham o próprio nome, tocam nas missas e guardam o celular. Funciona em aparelho velho e em conexão fraca.",
+      "claim": "Quem quiser uma conta depois, para que só ele possa responder pelo próprio nome, pode vincular. Ninguém é obrigado.",
+      "privacy": "Os links que você manda levam nomes e horários de missa, e nada mais: sem lista de membros, sem telefone, sem e-mail. Sua paróquia vê só a sua paróquia.",
+      "title": "Seus acólitos nunca criam conta"
+    },
+    "novena": {
+      "body": "Nove noites, vagas numeradas de um a seis, e os acólitos pegam direto, igualzinho à lista numerada que alguém digita no grupo todo ano, só que uma vaga não pode ser pega duas vezes.",
+      "scope": "A novena pode ficar dentro da escala do mês ou ter escala própria, com link e prazo só dela. Se alguém já está servindo no mesmo horário da escala da paróquia, você é avisado antes de publicar.",
+      "title": "Novena do jeito que seu grupo já faz"
+    },
+    "productName": "Escala de Acólitos",
+    "recognition": {
+      "closing": "Nada disso é o ministério. É o que está entre você e o ministério.",
+      "items": [
+        "Você monta o formulário de novo, porque as datas do mês passado estão erradas.",
+        "Vinte e duas pessoas respondem. São cinquenta e quatro nomes na sua lista, e o formulário não diz quais trinta e dois faltam.",
+        "Você copia as respostas para a planilha e ordena na mão, tentando lembrar quem serviu domingo passado e quem não serve desde a Páscoa.",
+        "Você tira um print da tabela e manda a imagem no grupo. Alguém pergunta qual é a missa dele.",
+        "Aí, no sábado à noite: “desculpa, não vou conseguir amanhã”. A mensagem afunda embaixo de outras duzentas, e você descobre na porta da sacristia no domingo de manhã."
+      ],
+      "title": "Essa parte você já conhece."
+    },
+    "stats": {
+      "body": "No fim do mês dá para ver com clareza: os três que serviram todas as semanas, os que serviram uma vez desde a Páscoa e os que não respondem um formulário há dois meses.",
+      "closing": "Não é ranking. É como você percebe o menino que parou de vir sem falar nada, antes de passar uma temporada inteira.",
+      "title": "Quem serve mais. Quem serve menos. Quem parou de vir."
+    },
+    "steps": {
+      "items": [
+        {
+          "title": "Cadastre uma vez.",
+          "body": "Suas capelas, os horários de uma semana normal e quantos acólitos cada missa precisa. Você não vai digitar data de novo."
+        },
+        {
+          "title": "Abra o mês.",
+          "body": "Todas as missas aparecem, geradas dessa semana normal. Você ajusta o que for diferente desta vez: uma festa, um funeral, a semana em que a igreja fica fechada."
+        },
+        {
+          "title": "Mande um link no grupo.",
+          "body": "Seu pessoal abre, acha o próprio nome e filtra por domingos e manhãs, e um toque marca as doze datas de uma vez. E acabou."
+        },
+        {
+          "title": "Monte a escala, vaga por vaga.",
+          "body": "Em cada lugar você vê quem está disponível, quem serviu menos vezes no mês e quem já está servindo em outro lugar naquele dia. Você escolhe cada nome. O app nunca escala ninguém sozinho."
+        },
+        {
+          "title": "Publique.",
+          "body": "Um link somente leitura volta para o grupo: a escala pronta, no celular, sempre atual. Chega de print que vence no instante em que algo muda."
+        }
+      ],
+      "title": "Como fica o mês"
+    },
+    "swap": {
+      "body": "Acontece, e não é falha de ninguém. O acólito abre a própria missa e pede substituição. Aquilo vira um link que você manda no grupo. O primeiro que tocar assume a vaga, a escala se atualiza sozinha, e o link publicado já está certo.",
+      "closing": "Sem mensagem repetida três vezes, sem ninguém esperando resposta, e nunca duas pessoas aparecendo para a mesma vaga.",
+      "title": "“Não vou conseguir no domingo.”"
+    },
+    "tarcisius": {
+      "closing": "É só para isso que isto aqui serve.",
+      "figureAlt": "São Tarcísio, segurando a Eucaristia junto ao peito",
+      "story": "Roma, século III. A tradição guarda a memória de um menino de uns doze anos a quem confiaram levar a Eucaristia pela cidade até cristãos presos. Foi parado no caminho e mandaram que entregasse. Ele se recusou, e foi morto ainda segurando. Foi sepultado na catacumba de São Calisto, e a Igreja o deu aos acólitos e aos que fazem a primeira comunhão como padroeiro.",
+      "title": "Sob a proteção de São Tarcísio",
+      "today": "Nada parecido é pedido às crianças da sua sacristia. Apenas que sirvam, e que alguém acompanhe quem, com cuidado, e sem esquecer ninguém."
+    },
+    "turn": "Aqui está o mesmo mês, de outro jeito."
+  },
+  "myMasses": {
+    "claimPrompt": "Vincule seu nome para ver onde você está escalado.",
+    "list": {
+      "cancelRequest": "Cancelar pedido",
+      "cantMakeIt": "Não vou conseguir",
+      "copyLink": "Copiar link do pedido",
+      "emptyState": "Nenhuma missa publicada pela frente. Quando a escala do próximo mês sair, ela aparece aqui.",
+      "whenWithLabel": "{when} · {label}"
+    },
+    "subtitle": "{name} · {count, plural, one {# missa pela frente} other {# missas pela frente}}",
+    "swapDialog": {
+      "copyLinkLabel": "Copiar link",
+      "notice": "Quem marcou disponibilidade para esse horário recebe um aviso.",
+      "opened": "Pedido aberto. Quem clicar primeiro assume a vaga.",
+      "reasonPlaceholder": "Motivo (opcional)",
+      "submit": "Abrir pedido",
+      "title": "Pedir substituição"
+    },
+    "title": "Minhas missas",
+    "toast": {
+      "requestCancelled": "Pedido cancelado"
+    },
+    "whatsApp": {
+      "callToAction": "Quem puder assumir, é só abrir e confirmar:",
+      "header": "🔄 *Preciso de substituição*",
+      "reason": "Motivo: {reason}"
+    },
+    "whenAt": "{date} às {time}",
+    "whenLabel": "{weekday}, {date}"
+  },
+  "nav": {
+    "group": "Grupo",
+    "home": "Início",
+    "menu": "Menu",
+    "more": "Mais",
+    "myMasses": "Minhas missas",
+    "people": "Acólitos",
+    "schedules": "Escalas",
+    "stats": "Estatísticas"
+  },
+  "newGroup": {
+    "back": "Voltar",
+    "form": {
+      "description": "Um grupo é uma paróquia ou ministério: tem a própria lista de acólitos, locais e escalas. Você entra como administrador.",
+      "nameLabel": "Nome do grupo",
+      "namePlaceholder": "Paróquia Santa Maria, Vila Nova",
+      "submit": "Criar grupo",
+      "timeZoneLabel": "Fuso horário",
+      "title": "Novo grupo"
+    },
+    "headingAnother": "Criar outro grupo",
+    "headingFirst": "Criar seu grupo",
+    "title": "Novo grupo"
+  },
+  "pending": {
+    "code": {
+      "description": "Mande para quem organiza a escala na sua paróquia. A pessoa digita o código e te adiciona.",
+      "signedInAs": "Conectado como {email}",
+      "title": "Seu código"
+    },
+    "create": {
+      "action": "Criar um grupo",
+      "description": "Crie o seu grupo, cadastre os acólitos e monte a primeira escala.",
+      "title": "É você que organiza?"
+    },
+    "description": "Ela ainda não faz parte de nenhum grupo. Cole o link que o coordenador te mandou ou passe para ele o código abaixo, para ele te adicionar.",
+    "heading": "Sua conta está pronta",
+    "joined": "Você entrou",
+    "link": {
+      "action": "Entrar",
+      "description": "Cole aqui o link do grupo e você já entra.",
+      "label": "Link do grupo",
+      "placeholder": "Cole o link ou o código aqui",
+      "title": "Recebeu um link?"
+    },
+    "signOut": "Sair",
+    "title": "Aguardando liberação"
+  },
+  "people": {
+    "count": "{count, plural, one {# pessoa} other {# pessoas}}",
+    "dialog": {
+      "createTitle": "Novo acólito",
+      "description": "O e-mail aqui serve para avisos. Vincular conta é outra coisa: quem vincula é a própria pessoa, ou um convite nominal.",
+      "editAria": "Editar {name}",
+      "editTitle": "Editar acólito",
+      "email": "E-mail",
+      "fullName": "Nome completo",
+      "phone": "Telefone",
+      "shortName": "Como aparece na escala"
+    },
+    "emptyState": "Ninguém encontrado.",
+    "import": {
+      "added": "{count, plural, one {# nome adicionado} other {# nomes adicionados}}",
+      "description": "Cole a lista, um nome por linha. Quem já existe é ignorado.",
+      "nothingNew": "Nada novo: todos já estavam na lista",
+      "placeholder": "Ana Silva\nPedro Lima\nMaria Carvalho",
+      "title": "Importar nomes",
+      "trigger": "Importar"
+    },
+    "metaTitle": "Acólitos",
+    "onlyInactive": "Só inativos",
+    "row": {
+      "activeToggle": "Ativo",
+      "delete": "Excluir {name}",
+      "inactive": "inativo",
+      "linkedAccount": "Conta vinculada",
+      "linkedAccountUnknown": "conta vinculada",
+      "noAccount": "sem conta vinculada",
+      "unlink": "Desvincular conta",
+      "unlinked": "Vínculo desfeito"
+    },
+    "searchPlaceholder": "Buscar nome",
+    "summary": "{total} no grupo · {linked} com conta vinculada",
+    "title": "Acólitos"
+  },
+  "published": {
+    "emptyState": "Escala sem celebrações.",
+    "emptyStateMine": "Você não está escalado neste mês.",
+    "eventEmptyState": "Sem acólitos escalados",
+    "identifyAction": "Marcar meu nome",
+    "onlyMineToggle": "Só as minhas ({count})",
+    "swapDialog": {
+      "copyLink": "Copiar link",
+      "notice": "Quem marcou disponibilidade para esse horário recebe um aviso por e-mail.",
+      "openedState": "Pedido aberto. Mande o link no grupo: quem clicar primeiro assume a vaga.",
+      "reasonPlaceholder": "Motivo (opcional)",
+      "shareCall": "Quem puder assumir, é só abrir e confirmar:",
+      "shareDetails": "{time} · {location} ({month})",
+      "shareHeading": "🔄 *Preciso de substituição*",
+      "shareReason": "Motivo: {reason}",
+      "submitAction": "Abrir pedido",
+      "title": "Pedir substituição",
+      "whenLabel": "{time} · {location}"
+    },
+    "swapOpenLink": "precisa de troca",
+    "swapRequestAction": "não vou conseguir",
+    "title": "Escala"
+  },
+  "schedules": {
+    "assembly": {
+      "allAvailableAssigned": "Todos os que marcaram disponibilidade já estão nesta celebração. Ative a opção acima para escalar alguém do grupo mesmo assim.",
+      "allFilled": "Tudo preenchido. 🎉",
+      "autoFillResult": "{count, plural, =0 {Ninguém disponível para as vagas livres} one {# vaga preenchida} other {# vagas preenchidas}}",
+      "availableTooltip": "Quem marcou disponibilidade",
+      "clearSlot": "Tirar da vaga",
+      "emptyState": "Nenhuma celebração nesta escala.",
+      "noMatches": "Nenhum nome encontrado.",
+      "noneAvailable": "Ninguém marcou disponibilidade. Ative a opção acima para ver todos.",
+      "onlyIncomplete": "Só celebrações com vaga livre",
+      "openSlot": "vaga livre",
+      "pickerHint": "Ordenado por quem está em falta de escala. A escolha é sua.",
+      "searchPlaceholder": "Buscar nome",
+      "shortOnCandidates": "Menos candidatos que vagas",
+      "showAll": "Mostrar quem não marcou disponibilidade",
+      "slotTitle": "{location} · vaga {position}",
+      "suggestFill": "{count, plural, one {Sugerir para a vaga livre} other {Sugerir para as # vagas livres}}",
+      "tookSlotTooltip": "Quem já pegou vaga"
+    },
+    "assignmentCount": "{count, plural, one {# escalação} other {# escalações}}",
+    "badges": {
+      "direct": "direto",
+      "novena": "novena",
+      "special": "especial",
+      "swap": "troca",
+      "unavailable": "fora"
+    },
+    "celebrationCount": "{count, plural, one {# celebração} other {# celebrações}}",
+    "detail": {
+      "closeResponses": "Fechar respostas",
+      "publish": "Publicar",
+      "published": "{count, plural, =0 {Escala publicada.} one {Escala publicada. # avisado por e-mail.} other {Escala publicada. # avisados por e-mail.}}",
+      "reopenResponses": "Reabrir respostas",
+      "slotsFilled": "{filled} de {total} vagas preenchidas",
+      "tabAssembly": "Montagem",
+      "tabEvents": "Celebrações",
+      "tabResponses": "Respostas",
+      "tabShare": "Compartilhar",
+      "title": "Escala",
+      "unpublish": "Despublicar"
+    },
+    "events": {
+      "add": "Celebração",
+      "delete": "Excluir celebração",
+      "dialogDescription": "Use “direto” quando a vaga for pegada pelo próprio acólito, como na novena.",
+      "edit": "Editar celebração",
+      "editTitle": "Editar celebração",
+      "emptyState": "Nenhuma celebração. Adicione uma, ou gere a partir da grade criando outra escala.",
+      "kindMass": "Missa",
+      "kindNovena": "Novena",
+      "kindSpecial": "Celebração especial",
+      "labelPlaceholder": "Solenidade da Santa Cruz",
+      "newTitle": "Nova celebração"
+    },
+    "fields": {
+      "date": "Data",
+      "days": "Dias",
+      "deadline": "Prazo",
+      "descriptionOptional": "Descrição (opcional)",
+      "firstDay": "Primeiro dia",
+      "kind": "Tipo",
+      "location": "Local",
+      "month": "Mês",
+      "name": "Nome",
+      "signupMode": "Preenchimento",
+      "slots": "Vagas",
+      "slotsPerDay": "Vagas por dia",
+      "time": "Hora",
+      "title": "Título"
+    },
+    "linkCopied": "Link copiado",
+    "list": {
+      "createSchedule": "Criar escala",
+      "deadlineHint": "Depois dessa data o link para de aceitar respostas.",
+      "deadlineLabel": "Prazo de preenchimento",
+      "deadlineSummary": "prazo {date}",
+      "emptyHint": "Cadastre a grade semanal em <link>Grupo</link> para o mês vir pronto.",
+      "emptyState": "Nenhuma escala ainda.",
+      "generateEmptyHint": "Nenhuma missa fixa cadastrada ainda",
+      "generateHint": "Cria todas as missas fixas do mês",
+      "generateLabel": "Gerar celebrações da grade",
+      "kindMonthlyHint": "As missas do mês",
+      "kindMonthlyLabel": "Mensal",
+      "kindNovenaHint": "Dias seguidos",
+      "kindNovenaLabel": "Novena",
+      "newMonthlyDescription": "O mês já nasce com as missas da grade semanal. Você ajusta depois.",
+      "newNovenaDescription": "Uma novena tem link e prazo próprios: não precisa entrar na escala do mês.",
+      "newSchedule": "Nova escala",
+      "subtitle": "Crie a do mês, mande o link no grupo e acompanhe quem respondeu.",
+      "title": "Escalas"
+    },
+    "messageCopied": "Mensagem copiada",
+    "monthlyScheduleTitle": "Escala Mensal | {month}",
+    "notifications": {
+      "fallbackRequester": "Um acólito"
+    },
+    "novena": {
+      "add": "Novena",
+      "create": "Criar novena",
+      "created": "Novena criada",
+      "dayLabel": "{day}º dia",
+      "deadlineOptional": "Prazo (opcional)",
+      "dialogDescription": "Cria os dias seguidos de uma vez, com vagas numeradas que o próprio acólito pega, igual à mensagem do grupo.",
+      "dialogTitle": "Nova novena",
+      "fallbackTitle": "Novena",
+      "modeCoordinator": "O coordenador escala",
+      "modeDirect": "O acólito pega a vaga",
+      "namePlaceholder": "Novena em honra a Nossa Senhora das Dores",
+      "whoFills": "Quem preenche"
+    },
+    "responses": {
+      "allAnswered": "Todo mundo respondeu. 🎉",
+      "answeredDescription": "Quem deu poucas datas é quem mais limita a montagem.",
+      "answeredTile": "Responderam",
+      "answeredTitle": "Responderam ({count})",
+      "atRiskDescription": "Menos candidatos disponíveis do que vagas.",
+      "atRiskTile": "Celebrações em risco",
+      "atRiskTitle": "Vai faltar gente",
+      "dateCount": "{count, plural, one {# data} other {# datas}}",
+      "noAnswersYet": "Ninguém respondeu ainda. <copy>Copiar o link</copy>",
+      "pendingDescription": "Cobre no grupo com a mensagem pronta.",
+      "pendingTile": "Faltam responder",
+      "pendingTitle": "Faltam responder ({count})",
+      "remind": "Cobrar",
+      "reminderShareTitle": "Lembrete da escala"
+    },
+    "save": "Salvar",
+    "share": {
+      "copyLink": "Copiar link",
+      "copyMessage": "Copiar mensagem",
+      "csv": "CSV",
+      "csvFileName": "escala-{month}.csv",
+      "exportDescription": "Para colar no grupo ou abrir na planilha de sempre.",
+      "exportTitle": "Exportar",
+      "fillLinkDescription": "É o que vai no grupo para o pessoal marcar disponibilidade.",
+      "fillLinkDescriptionDirect": "É o que vai no grupo para o pessoal pegar as vagas.",
+      "fillLinkTitle": "Link de preenchimento",
+      "noteLabel": "Recado no formulário",
+      "notePlaceholder": "Coloquem todas as disponibilidades para facilitar a organização.",
+      "novenaAsText": "Novena em texto",
+      "novenaCopied": "Novena copiada",
+      "novenaShareTitle": "Novena",
+      "previewTitle": "Prévia da escala",
+      "scheduleAsText": "Escala em texto",
+      "scheduleCopied": "Escala copiada",
+      "scheduleShareTitle": "Escala",
+      "scheduleUpdated": "Escala atualizada",
+      "sendOnWhatsApp": "Mandar no WhatsApp",
+      "settingsDescription": "O recado aparece no topo do formulário, antes das datas.",
+      "settingsTitle": "Ajustes",
+      "viewLinkDescription": "Somente leitura. Quem abrir vê onde cada um serve.",
+      "viewLinkTitle": "Link da escala publicada"
+    },
+    "status": {
+      "archived": "arquivada",
+      "building": "montando",
+      "collecting": "coletando",
+      "draft": "rascunho",
+      "published": "publicada"
+    }
+  },
+  "shell": {
+    "brand": {
+      "short": "Escala"
+    },
+    "install": {
+      "action": "Instalar como app",
+      "android": "Toque em Instalar e confirme.",
+      "description": "Coloque na tela inicial do celular e ele abre como qualquer outro app, em tela cheia e sem a barra do navegador.",
+      "desktop": "Abra o menu do navegador e escolha Instalar, ou use o ícone no fim da barra de endereço.",
+      "dismiss": "Agora não",
+      "installed": "Já está na sua tela inicial.",
+      "ios": "Toque no botão Compartilhar e depois em Adicionar à Tela de Início.",
+      "title": "Deixe a um toque de distância"
+    },
+    "manifest": {
+      "description": "Escala do ministério de acólitos: disponibilidade por link, montagem e substituição."
+    },
+    "notFound": {
+      "action": "Voltar ao início",
+      "description": "O link pode ter expirado, a escala pode ter sido removida ou o endereço veio incompleto do WhatsApp.",
+      "title": "Não encontramos essa página"
+    },
+    "parishSwitcher": {
+      "createGroup": "Criar novo grupo",
+      "label": "{count, plural, one {Seu grupo} other {Seus grupos}}"
+    },
+    "passwordInput": {
+      "hide": "Ocultar senha",
+      "show": "Mostrar senha"
+    },
+    "roles": {
+      "admin": "Administrador",
+      "coordinator": "Coordenador",
+      "member": "Acólito"
+    },
+    "select": {
+      "placeholder": "Selecione"
+    },
+    "sidebar": {
+      "collapse": "Recolher menu",
+      "expand": "Expandir menu"
+    },
+    "signOut": "Sair",
+    "theme": {
+      "toggle": "Alternar tema"
+    },
+    "viewAs": {
+      "label": "Ver o app como",
+      "trigger": "Ver como"
+    }
+  },
+  "stats": {
+    "byMonth": {
+      "title": "Escalações por mês"
+    },
+    "csv": {
+      "answered": "Datas marcadas",
+      "daysSinceLast": "Dias desde a última",
+      "fileName": "estatisticas-acolitos.csv",
+      "name": "Nome",
+      "served": "Escalas",
+      "topLocation": "Local mais frequente"
+    },
+    "exportCsv": "CSV",
+    "metaTitle": "Estatísticas",
+    "neverServed": "nunca serviu",
+    "roster": {
+      "description": "A barra compara com quem mais serviu no período.",
+      "title": "Acólitos ({count})"
+    },
+    "row": {
+      "answered": "{count, plural, one {# data marcada} other {# datas marcadas}}",
+      "lastServed": "{count, plural, one {última há # dia} other {última há # dias}}",
+      "topLocation": "mais em {location}"
+    },
+    "sorts": {
+      "absent": "Quem sumiu",
+      "answered": "Quem responde mais",
+      "served": "Quem serve mais"
+    },
+    "summary": "Média de {average} escalas por acólito · {count, plural, one {# nunca serviu} other {# nunca serviram}}",
+    "title": "Estatísticas"
+  },
+  "swap": {
+    "acceptAction": "Posso assumir",
+    "acceptedToast": "Vaga assumida. Obrigado!",
+    "closedNote": {
+      "cancelled": "Quem pediu acabou resolvendo.",
+      "filled": "Nada a fazer por aqui.",
+      "past": "Essa data já passou."
+    },
+    "firstComeNote": "Primeiro que confirmar fica com a vaga.",
+    "heading": {
+      "cancelled": "Pedido cancelado",
+      "filled": "Vaga já assumida",
+      "open": "Alguém precisa de substituição",
+      "past": "Celebração já passou"
+    },
+    "identifyAction": "Quem é você?",
+    "picker": {
+      "descriptionAll": "Qualquer pessoa do grupo pode assumir esta vaga.",
+      "descriptionCandidates": "Quem marcou disponibilidade para este horário.",
+      "emptyState": "Nenhum nome encontrado.",
+      "title": "Quem vai assumir?"
+    },
+    "reasonLabel": "Motivo: {reason}",
+    "showAllAction": "Não acho meu nome na lista",
+    "showCandidatesAction": "Mostrar só quem marcou disponibilidade",
+    "subheading": {
+      "filled": "{name} assumiu o lugar de {requester}.",
+      "open": "{requester} não vai conseguir servir."
+    },
+    "title": "Substituição",
+    "unknownFiller": "Outro acólito",
+    "unknownRequester": "Um acólito",
+    "whenLabel": "{weekday}, {date} às {time}"
+  },
+  "whatsapp": {
+    "csv": {
+      "date": "DATA",
+      "location": "LOCAL",
+      "locationWithLabel": "{location} ({label})",
+      "server": "ACÓLITO",
+      "time": "HORA",
+      "weekday": "DIA DA SEMANA"
+    },
+    "invite": {
+      "deadline": "⏰ Preenchimento disponível até {deadline}.",
+      "greeting": "Bom dia, pessoal! 🙏",
+      "howToMonthly": "Basta abrir, escolher o seu nome e marcar as datas.",
+      "howToNovena": "Basta abrir, escolher o seu nome e pegar o dia que puder.",
+      "novenaIncluded": "A escala da novena está nesse mesmo link, podem preencher tudo junto.",
+      "openedMonthly": "Está aberta a escala de {monthLower}. Deixo o link para que possamos nos organizar com calma:",
+      "openedNovena": "Está aberta a escala da {title}. Deixo o link para nos organizarmos:"
+    },
+    "novenaText": {
+      "eventLine": "- {when}",
+      "slotLine": "{position}- {name}",
+      "title": "*{title}*"
+    },
+    "published": {
+      "body": "Confiram onde cada um está servindo:",
+      "footer": "Quem não puder em alguma data, peça substituição pelo próprio link.",
+      "titleMonthly": "✅ *ESCALA DE {monthUpper}* publicada!",
+      "titleNovena": "✅ *{title}*: escala publicada!"
+    },
+    "reminder": {
+      "deadline": "O preenchimento fecha {deadline}.",
+      "pending": "Ainda não marcaram disponibilidade: {names}.",
+      "pendingUnknown": "Ainda falta gente marcar disponibilidade.",
+      "title": "⏰ *Faltam vocês na escala*"
+    },
+    "scheduleText": {
+      "dayHeading": "*{weekday}, {date}*",
+      "eventLine": "• {time} - {location}",
+      "eventLineWithLabel": "• {time} - {location} ({label})",
+      "namesLine": "  {names}",
+      "noNames": "  _sem acólitos_",
+      "titleMonthly": "*ESCALA MINISTÉRIO DE ACÓLITOS - {monthUpper}*",
+      "titleOther": "*{title}*"
+    },
+    "swap": {
+      "body": "{person} não vai conseguir servir {when}, em {location}.",
+      "callToAction": "Quem puder assumir, é só abrir e confirmar:",
+      "reason": "Motivo: {reason}",
+      "title": "🔄 *Preciso de substituição*"
+    },
+    "when": "{weekday}, {date} às {time}"
+  }
+}

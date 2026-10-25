@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,8 +10,9 @@ import {
   deleteLocationAction,
   saveLocationAction,
   toggleLocationAction,
-} from "@/app/(app)/grupo/actions";
+} from "@/app/(app)/group/actions";
 import { SubmitButton } from "@/components/molecules/submit-button";
+import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,25 +29,39 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
+import type { ActionResult } from "@/lib/action-result";
 import type { Location } from "@/lib/db/types";
+
+/** Fallback colour for a new place, matched by the server-side schema. */
+const DEFAULT_COLOR = "#6366f1";
 
 export function LocationsPanel({ locations }: { locations: Location[] }) {
   const router = useRouter();
+  const t = useTranslations("group.locations");
+  const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
+
+  /** Every row action reports the same way: toast on failure, refresh on success. */
+  const run = (action: () => Promise<ActionResult>) =>
+    startTransition(async () => {
+      const message = resultError(await action());
+      if (message) toast.error(message);
+      else router.refresh();
+    });
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <MapPin className="h-4 w-4" />
-          Locais ({locations.length})
+          {t("title", { count: locations.length })}
         </CardTitle>
         <LocationDialog nextOrder={locations.length + 1} />
       </CardHeader>
       <CardContent className="space-y-1">
         {locations.length === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
-            Nenhum local ainda. Comece pela matriz.
+            {t("emptyState")}
           </p>
         ) : null}
         {locations.map((loc, i) => (
@@ -65,17 +81,15 @@ export function LocationsPanel({ locations }: { locations: Location[] }) {
                   </p>
                 ) : null}
               </div>
-              {!loc.active ? <Badge variant="secondary">inativo</Badge> : null}
+              {!loc.active ? (
+                <Badge variant="secondary">{t("inactive")}</Badge>
+              ) : null}
               <Switch
                 checked={loc.active}
                 disabled={pending}
-                aria-label="Ativo"
+                aria-label={t("activeToggle")}
                 onCheckedChange={(checked) =>
-                  startTransition(async () => {
-                    const res = await toggleLocationAction(loc.id, checked);
-                    if (!res.ok) toast.error(res.error);
-                    else router.refresh();
-                  })
+                  run(() => toggleLocationAction(loc.id, checked))
                 }
               />
               <LocationDialog location={loc} nextOrder={loc.sort_order} />
@@ -83,14 +97,8 @@ export function LocationsPanel({ locations }: { locations: Location[] }) {
                 size="icon"
                 variant="ghost"
                 disabled={pending}
-                aria-label={`Excluir ${loc.name}`}
-                onClick={() =>
-                  startTransition(async () => {
-                    const res = await deleteLocationAction(loc.id);
-                    if (!res.ok) toast.error(res.error);
-                    else router.refresh();
-                  })
-                }
+                aria-label={t("delete", { name: loc.name })}
+                onClick={() => run(() => deleteLocationAction(loc.id))}
               >
                 <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
               </Button>
@@ -110,62 +118,67 @@ function LocationDialog({
   nextOrder: number;
 }) {
   const router = useRouter();
+  const t = useTranslations("group.locations");
+  const common = useTranslations("common");
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(saveLocationAction, {
     onSuccess: () => {
       setOpen(false);
       router.refresh();
     },
-    onError: (message) => toast.error(message),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {location ? (
-          <Button size="icon" variant="ghost" aria-label={`Editar ${location.name}`}>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={t("edit", { name: location.name })}
+          >
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
           <Button size="sm">
             <Plus className="h-4 w-4" />
-            Novo
+            {t("add")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{location ? "Editar local" : "Novo local"}</DialogTitle>
-          <DialogDescription>
-            O nome aparece na escala; o apelido é usado onde falta espaço.
-          </DialogDescription>
+          <DialogTitle>
+            {location ? t("dialog.editTitle") : t("dialog.createTitle")}
+          </DialogTitle>
+          <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           {location ? (
             <input type="hidden" name="id" value={location.id} />
           ) : null}
           <div className="space-y-2">
-            <Label htmlFor="loc-name">Nome</Label>
+            <Label htmlFor="loc-name">{t("dialog.nameLabel")}</Label>
             <Input
               id="loc-name"
               name="name"
               defaultValue={location?.name}
-              placeholder="Matriz de Cristo Rei"
+              placeholder={t("dialog.namePlaceholder")}
               required
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="loc-short">Apelido</Label>
+              <Label htmlFor="loc-short">{t("dialog.shortNameLabel")}</Label>
               <Input
                 id="loc-short"
                 name="shortName"
                 defaultValue={location?.short_name ?? ""}
-                placeholder="Matriz"
+                placeholder={t("dialog.shortNamePlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="loc-order">Ordem</Label>
+              <Label htmlFor="loc-order">{t("dialog.sortOrderLabel")}</Label>
               <Input
                 id="loc-order"
                 name="sortOrder"
@@ -176,16 +189,18 @@ function LocationDialog({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="loc-color">Cor</Label>
+            <Label htmlFor="loc-color">{t("dialog.colorLabel")}</Label>
             <Input
               id="loc-color"
               name="color"
               type="color"
-              defaultValue={location?.color ?? "#6366f1"}
+              defaultValue={location?.color ?? DEFAULT_COLOR}
               className="h-10 w-20 p-1"
             />
           </div>
-          <SubmitButton pending={pending} className="w-full">Salvar</SubmitButton>
+          <SubmitButton pending={pending} className="w-full">
+            {common("save")}
+          </SubmitButton>
         </form>
       </DialogContent>
     </Dialog>

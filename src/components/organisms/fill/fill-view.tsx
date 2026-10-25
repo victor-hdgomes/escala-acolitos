@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   Check,
   CheckCheck,
@@ -30,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { useResultError } from "@/hooks/use-error-message";
 import type { EventKind, SignupMode } from "@/lib/db/types";
 import { cn } from "@/lib/utils";
 
@@ -69,29 +71,25 @@ type QuickFilter =
   | "novena";
 
 /**
- * Os chips vivem em dimensões diferentes, e isso muda como combinam:
- * OU dentro da mesma dimensão, E entre dimensões. "Domingos + Sábados" mostra
- * os dois (mesma dimensão); "Domingos + Manhã" mostra só os domingos de manhã
- * (dimensões diferentes), que é como a frase soa em português.
+ * The chips live on different dimensions, and that changes how they combine:
+ * OR within the same dimension, AND across dimensions. "Sundays + Saturdays"
+ * shows both (same dimension); "Sundays + Morning" shows only Sunday mornings
+ * (different dimensions), which is how the phrase sounds when read out loud.
  */
 type FilterDimension = "day" | "time" | "kind";
 
-const QUICK_FILTERS: Array<{
-  id: QuickFilter;
-  label: string;
-  dimension: FilterDimension;
-}> = [
-  { id: "sunday", label: "Domingos", dimension: "day" },
-  { id: "saturday", label: "Sábados", dimension: "day" },
-  { id: "weekday", label: "Dias de semana", dimension: "day" },
-  { id: "morning", label: "Manhã", dimension: "time" },
-  { id: "night", label: "Noite", dimension: "time" },
-  { id: "novena", label: "Novena", dimension: "kind" },
+const QUICK_FILTERS: Array<{ id: QuickFilter; dimension: FilterDimension }> = [
+  { id: "sunday", dimension: "day" },
+  { id: "saturday", dimension: "day" },
+  { id: "weekday", dimension: "day" },
+  { id: "morning", dimension: "time" },
+  { id: "night", dimension: "time" },
+  { id: "novena", dimension: "kind" },
 ];
 
 const DIMENSION_OF = new Map(QUICK_FILTERS.map((f) => [f.id, f.dimension]));
 
-const STORAGE_PREFIX = "escala:pessoa:";
+const STORAGE_PREFIX = "fill:person:";
 
 function matchesFilter(event: FillEvent, filter: QuickFilter): boolean {
   switch (filter) {
@@ -157,7 +155,10 @@ export function FillView({
   todayKey: string;
 }) {
   const router = useRouter();
-  // Quem está logado com nome vinculado já começa identificado.
+  const t = useTranslations("fill");
+  const tCommon = useTranslations("common");
+  const resultError = useResultError();
+  // Someone signed in under a linked name starts out already identified.
   const linkedPerson = people.find((p) => p.isMe) ?? null;
   const [person, setPerson] = React.useState<PickablePerson | null>(linkedPerson);
   const [pickerOpen, setPickerOpen] = React.useState(false);
@@ -171,7 +172,7 @@ export function FillView({
   const [busy, setBusy] = React.useState(false);
   const [showFilters, setShowFilters] = React.useState(false);
 
-  /** Trocar de nome recarrega as marcações daquela pessoa e grava o aparelho. */
+  /** Switching names reloads that person's marks and remembers the device. */
   const choosePerson = React.useCallback(
     (next: PickablePerson) => {
       setPerson(next);
@@ -179,26 +180,26 @@ export function FillView({
       try {
         localStorage.setItem(STORAGE_PREFIX + token, next.id);
       } catch {
-        // Navegador anônimo ou storage bloqueado — segue sem lembrar.
+        // Private window or storage blocked - carry on without remembering.
       }
     },
     [availabilityByPerson, token],
   );
 
-  // O localStorage não existe no servidor, então só dá para consultá-lo depois
-  // de montar — ler na renderização quebraria a hidratação.
+  // localStorage does not exist on the server, so it can only be read after
+  // mounting - reading it during render would break hydration.
   React.useEffect(() => {
     if (person) return;
     try {
       const stored = localStorage.getItem(STORAGE_PREFIX + token);
       const found = stored ? people.find((p) => p.id === stored) : null;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage é sistema externo
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage is an external system
       if (found && !(found.claimed && !found.isMe)) choosePerson(found);
       else setPickerOpen(true);
     } catch {
       setPickerOpen(true);
     }
-    // Só na montagem: depois disso quem manda é a escolha do usuário.
+    // Mount only: from here on the user's choice is what decides.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -221,7 +222,7 @@ export function FillView({
     .map((d) => ({ ...d, eventIds: d.eventIds.filter((id) => visibleIds.has(id)) }))
     .filter((d) => d.eventIds.length);
 
-  // Marcação em lote só faz sentido no que o coordenador vai escalar.
+  // Batch marking only makes sense for what the coordinator will assign.
   const batchIds = [...visibleIds].filter(
     (id) => eventById.get(id)?.signupMode === "availability",
   );
@@ -247,14 +248,15 @@ export function FillView({
       eventIds: [eventId],
       value: next,
     });
-    if (!res.ok) {
+    const message = resultError(res);
+    if (message) {
       setMarked((prev) => {
         const copy = new Set(prev);
         if (next) copy.delete(eventId);
         else copy.add(eventId);
         return copy;
       });
-      toast.error(res.error);
+      toast.error(message);
     }
   }
 
@@ -280,14 +282,15 @@ export function FillView({
     });
     setBusy(false);
 
-    if (!res.ok) {
+    const message = resultError(res);
+    if (message) {
       setMarked(previous);
-      toast.error(res.error);
+      toast.error(message);
     } else {
       toast.success(
         value
-          ? `${batchIds.length} ${batchIds.length === 1 ? "data marcada" : "datas marcadas"}`
-          : "Datas desmarcadas",
+          ? t("toast.marked", { count: batchIds.length })
+          : t("toast.unmarked"),
       );
     }
   }
@@ -302,9 +305,10 @@ export function FillView({
       position,
     });
     setBusy(false);
-    if (!res.ok) toast.error(res.error);
+    const message = resultError(res);
+    if (message) toast.error(message);
     else {
-      toast.success("Vaga confirmada");
+      toast.success(t("toast.slotTaken"));
       router.refresh();
     }
   }
@@ -318,9 +322,10 @@ export function FillView({
       eventId: event.id,
     });
     setBusy(false);
-    if (!res.ok) toast.error(res.error);
+    const message = resultError(res);
+    if (message) toast.error(message);
     else {
-      toast.success("Vaga liberada");
+      toast.success(t("toast.slotReleased"));
       router.refresh();
     }
   }
@@ -347,9 +352,11 @@ export function FillView({
         {!open ? (
           <Alert variant="destructive">
             <AlertDescription>
-              {closedReason === "deadline"
-                ? `O prazo de preenchimento terminou${deadlineLabel ? ` em ${deadlineLabel}` : ""}. Fale com a coordenação.`
-                : "Esta escala não está aberta para preenchimento."}
+              {closedReason !== "deadline"
+                ? t("closed.status")
+                : deadlineLabel
+                  ? t("closed.deadlineOn", { date: deadlineLabel })
+                  : t("closed.deadline")}
             </AlertDescription>
           </Alert>
         ) : null}
@@ -365,7 +372,10 @@ export function FillView({
         {open && deadlineLabel ? (
           <p className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
-            Preenchimento até <strong>{deadlineLabel}</strong>
+            {t.rich("deadlineNotice", {
+              date: deadlineLabel,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
           </p>
         ) : null}
 
@@ -381,7 +391,7 @@ export function FillView({
                 onClick={() => setShowFilters((v) => !v)}
               >
                 <Filter className="h-4 w-4" />
-                Filtros
+                {t("filters.toggle")}
                 {filtersActive ? (
                   <Badge variant="secondary">{filtersActive}</Badge>
                 ) : null}
@@ -394,7 +404,7 @@ export function FillView({
                       {QUICK_FILTERS.map((f) => (
                         <FilterChip
                           key={f.id}
-                          label={f.label}
+                          label={t(`filters.${f.id}`)}
                           active={quick.has(f.id)}
                           onClick={() =>
                             setQuick((prev) => toggleSet(prev, f.id))
@@ -426,7 +436,7 @@ export function FillView({
                         }}
                       >
                         <X className="h-4 w-4" />
-                        Limpar filtros
+                        {t("filters.clear")}
                       </Button>
                     ) : null}
                   </CardContent>
@@ -446,8 +456,10 @@ export function FillView({
                     <CheckCheck className="h-4 w-4" />
                   )}
                   {allBatchMarked
-                    ? `Desmarcar ${batchIds.length} datas`
-                    : `Marcar ${filtersActive ? "as" : "todas as"} ${batchIds.length} datas`}
+                    ? t("batch.unmark", { count: batchIds.length })
+                    : filtersActive
+                      ? t("batch.markFiltered", { count: batchIds.length })
+                      : t("batch.markAll", { count: batchIds.length })}
                 </Button>
               ) : null}
             </div>
@@ -461,7 +473,7 @@ export function FillView({
                       {day.weekdayLabel}
                     </span>
                     {day.key === todayKey ? (
-                      <Badge variant="secondary">hoje</Badge>
+                      <Badge variant="secondary">{tCommon("today")}</Badge>
                     ) : null}
                   </div>
                   <div className="space-y-2">
@@ -492,14 +504,14 @@ export function FillView({
 
               {visibleDays.length === 0 ? (
                 <p className="py-10 text-center text-sm text-muted-foreground">
-                  Nenhuma celebração com esses filtros.
+                  {t("emptyFiltered")}
                 </p>
               ) : null}
             </div>
           </>
         ) : (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            Escolha o seu nome para começar.
+            {t("chooseNamePrompt")}
           </p>
         )}
       </div>
@@ -509,10 +521,14 @@ export function FillView({
           <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
             <Sparkles className="h-4 w-4 shrink-0 text-[color:var(--color-filled)]" />
             <p className="min-w-0 flex-1 text-sm">
-              <strong className="tabular-nums">{markedCount}</strong>{" "}
-              {markedCount === 1 ? "data marcada" : "datas marcadas"}
+              {t.rich("markedCount", {
+                count: markedCount,
+                strong: (chunks) => (
+                  <strong className="tabular-nums">{chunks}</strong>
+                ),
+              })}
               <span className="ml-2 text-xs text-muted-foreground">
-                salvo automaticamente
+                {t("autosaved")}
               </span>
             </p>
           </div>
@@ -627,8 +643,8 @@ function AvailabilityRow({
 }
 
 /**
- * Celebração de preenchimento direto (novena): mostra as vagas numeradas,
- * igual à mensagem que o grupo já usa. Quem toca numa vaga vazia assume.
+ * A direct-signup celebration (novena): shows the numbered slots, just like
+ * the message the group already uses. Tapping an empty slot takes it.
  */
 function DirectEventCard({
   event,
@@ -643,6 +659,7 @@ function DirectEventCard({
   onClaim: (position: number) => void;
   onRelease: () => void;
 }) {
+  const t = useTranslations("fill");
   const mine = event.takenIds.findIndex((id) => id === personId);
 
   return (
@@ -658,7 +675,7 @@ function DirectEventCard({
           variant="secondary"
           className="bg-[color:var(--color-novena)]/15 text-[color:var(--color-novena)]"
         >
-          direto
+          {t("direct.badge")}
         </Badge>
       </div>
       <p className="mb-2 truncate text-xs text-muted-foreground">
@@ -687,7 +704,7 @@ function DirectEventCard({
                     disabled={disabled}
                     onClick={onRelease}
                   >
-                    sair
+                    {t("direct.leave")}
                   </Button>
                 ) : (
                   <Lock className="h-3.5 w-3.5 text-muted-foreground" />
@@ -709,7 +726,9 @@ function DirectEventCard({
               )}
             >
               <span className="w-4 shrink-0 tabular-nums">{position}</span>
-              <span>{mine >= 0 ? "vaga livre" : "pegar esta vaga"}</span>
+              <span>
+                {mine >= 0 ? t("direct.openSlot") : t("direct.take")}
+              </span>
             </button>
           );
         })}

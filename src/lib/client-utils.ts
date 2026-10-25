@@ -1,6 +1,6 @@
-/** Utilidades de browser — nada aqui roda no servidor. */
+/** Browser utilities - nothing here runs on the server. */
 
-/** Mesma URL base do servidor, resolvida no client. */
+/** The same base URL as the server's, resolved on the client. */
 export function appUrlClient(path: string): string {
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
@@ -17,13 +17,13 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   }
 }
 
-/** Link universal do WhatsApp: abre o Web no desktop e o app no celular. */
+/** Universal WhatsApp link: opens Web on the desktop and the app on a phone. */
 export function whatsAppUrl(text: string): string {
   return `https://wa.me/?text=${encodeURIComponent(text)}`;
 }
 
 /**
- * Compartilhamento nativo quando existe (celular), clipboard como alternativa.
+ * Native sharing where it exists (phones), clipboard as the fallback.
  */
 export async function shareOrCopy(
   title: string,

@@ -1,13 +1,16 @@
--- Só o dono da instalação cria grupos.
+-- Only the owner of the installation opens groups.
 --
--- Antes, qualquer conta autenticada podia criar uma paróquia e virar admin
--- dela — bom para auto-atendimento, ruim aqui: quem entra por convite não
--- deve conseguir abrir grupos novos. Admin de paróquia continua mandando no
--- grupo dele; criar outro é só do superadmin.
+-- Until now any authenticated account could create a parish and become its
+-- admin. That is right for self-service and wrong here: someone who arrived
+-- through an invitation should not be able to open new groups. A parish admin
+-- still runs their own group; opening another is the superadmin's.
 --
--- Esta policy é defesa em profundidade: a criação roda por Server Action com
--- service role (o membership de admin precisa existir no mesmo instante em
--- que a paróquia nasce), e é lá que a checagem de verdade acontece.
+-- This policy is defence in depth. Creation runs in a Server Action with the
+-- service role, because the admin membership has to exist the instant the
+-- parish does, and that action is where the real check lives.
+--
+-- Superseded by 0004, which reopens creation to an account with no group at
+-- all. The rule here is kept for the history of why it was ever closed.
 
 drop policy if exists parishes_insert on public.parishes;
 

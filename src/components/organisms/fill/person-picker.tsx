@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { Lock, Search, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -26,15 +27,15 @@ function normalize(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    .replace(/[\u0300-\u036f]/g, "");
 }
 
 /**
- * Escolha do nome. É a primeira coisa que o acólito faz, num formulário sem
- * login — por isso busca por acento-insensível e alvo de toque grande.
+ * Picking your name. It is the first thing an altar server does, in a form
+ * with no sign-in - hence accent-insensitive search and a large tap target.
  *
- * Nome com conta vinculada aparece com cadeado: continua visível (para a
- * pessoa saber que está lá), mas só o dono da conta consegue selecionar.
+ * A name linked to an account shows a padlock: it stays visible (so the person
+ * knows it is there), but only the account's owner can select it.
  */
 export function PersonPicker({
   people,
@@ -42,20 +43,22 @@ export function PersonPicker({
   onChange,
   open,
   onOpenChange,
-  title = "Qual é o seu nome?",
-  description = "Selecione para marcar suas datas.",
-  emptyMessage = "Nenhum nome encontrado. Fale com a coordenação para ser incluído.",
+  title,
+  description,
+  emptyMessage,
 }: {
   people: PickablePerson[];
   value: PickablePerson | null;
   onChange: (person: PickablePerson) => void;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** O seletor serve a três telas; cada uma explica o próprio passo. */
+  /** The picker serves three screens; each one explains its own step. */
   title?: string;
   description?: string;
   emptyMessage?: string;
 }) {
+  const t = useTranslations("fill");
+  const tCommon = useTranslations("common");
   const [query, setQuery] = React.useState("");
 
   const filtered = React.useMemo(() => {
@@ -63,7 +66,7 @@ export function PersonPicker({
     const list = q
       ? people.filter((p) => normalize(p.name).includes(q))
       : people;
-    // Quem está logado vê o próprio nome no topo.
+    // Whoever is signed in sees their own name at the top.
     return [...list].sort((a, b) => Number(b.isMe) - Number(a.isMe));
   }, [people, query]);
 
@@ -71,8 +74,10 @@ export function PersonPicker({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[85vh] gap-0 overflow-hidden p-0 sm:max-w-md">
         <DialogHeader className="px-4 pt-4 pb-2">
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <DialogTitle>{title ?? t("personPicker.title")}</DialogTitle>
+          <DialogDescription>
+            {description ?? t("personPicker.description")}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="px-4 pb-3">
@@ -82,7 +87,7 @@ export function PersonPicker({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar"
+              placeholder={tCommon("search")}
               className="pl-9"
               inputMode="search"
             />
@@ -112,11 +117,13 @@ export function PersonPicker({
               >
                 <UserRound className="h-4 w-4 shrink-0 text-muted-foreground" />
                 <span className="min-w-0 flex-1 truncate">{person.name}</span>
-                {person.isMe ? <Badge variant="secondary">você</Badge> : null}
+                {person.isMe ? (
+                  <Badge variant="secondary">{tCommon("you")}</Badge>
+                ) : null}
                 {blocked ? (
                   <Lock
                     className="h-4 w-4 shrink-0 text-muted-foreground"
-                    aria-label="Vinculado a uma conta"
+                    aria-label={t("personPicker.lockedAria")}
                   />
                 ) : null}
               </button>
@@ -125,14 +132,14 @@ export function PersonPicker({
 
           {filtered.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-muted-foreground">
-              {emptyMessage}
+              {emptyMessage ?? t("personPicker.emptyState")}
             </p>
           ) : null}
         </div>
 
         <div className="border-t border-border p-3">
           <p className="text-center text-xs text-muted-foreground">
-            Nome com cadeado está vinculado a uma conta — só o dono marca.
+            {t("personPicker.lockedNote")}
           </p>
         </div>
       </DialogContent>
@@ -147,6 +154,8 @@ export function PersonButton({
   person: PickablePerson | null;
   onClick: () => void;
 }) {
+  const t = useTranslations("fill");
+
   return (
     <Button
       variant={person ? "outline" : "default"}
@@ -155,9 +164,11 @@ export function PersonButton({
     >
       <UserRound className="h-4 w-4" />
       <span className="min-w-0 flex-1 truncate text-left">
-        {person ? person.name : "Selecione o seu nome"}
+        {person ? person.name : t("personButton.empty")}
       </span>
-      <span className="text-xs text-muted-foreground">trocar</span>
+      <span className="text-xs text-muted-foreground">
+        {t("personButton.change")}
+      </span>
     </Button>
   );
 }

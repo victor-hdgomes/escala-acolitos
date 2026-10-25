@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { CalendarHeart, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -9,10 +10,12 @@ import {
   addNovenaAction,
   deleteEventAction,
   saveEventAction,
-} from "@/app/(app)/escalas/actions";
+} from "@/app/(app)/schedules/actions";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
+import { useDateFormatter } from "@/components/providers/timezone-provider";
 import { useFormAction } from "@/hooks/use-form-action";
+import { useResultError } from "@/hooks/use-error-message";
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,11 +30,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { dayKey, formatTime } from "@/lib/date";
+import { dayKey, zonedParts } from "@/lib/date";
 import type { EventView, LocationLite } from "@/lib/schedule/types";
 
 export function EventsTab({ detail, locations }: ScheduleViewProps) {
   const router = useRouter();
+  const t = useTranslations("schedules");
+  const df = useDateFormatter();
+  const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
   const monthStart = detail.schedule.month;
 
@@ -63,7 +69,7 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
                 {i > 0 ? <Separator /> : null}
                 <div className="flex items-center gap-3 py-2">
                   <span className="w-14 shrink-0 text-sm tabular-nums">
-                    {formatTime(event.starts_at, detail.timezone)}
+                    {df.time(event.starts_at)}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm">{event.location.name}</p>
@@ -79,7 +85,7 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
                       variant="secondary"
                       className="bg-[color:var(--color-novena)]/15 text-[color:var(--color-novena)]"
                     >
-                      direto
+                      {t("badges.direct")}
                     </Badge>
                   ) : null}
                   <EventDialog
@@ -93,14 +99,15 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
                     size="icon"
                     variant="ghost"
                     disabled={pending}
-                    aria-label="Excluir celebração"
+                    aria-label={t("events.delete")}
                     onClick={() =>
                       startTransition(async () => {
                         const res = await deleteEventAction(
                           event.id,
                           detail.schedule.id,
                         );
-                        if (!res.ok) toast.error(res.error);
+                        const message = resultError(res);
+                        if (message) toast.error(message);
                         else router.refresh();
                       })
                     }
@@ -116,12 +123,23 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
 
       {detail.days.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          Nenhuma celebração. Adicione uma, ou gere a partir da grade criando
-          outra escala.
+          {t("events.emptyState")}
         </p>
       ) : null}
     </div>
   );
+}
+
+/**
+ * "19:30" for an `<input type="time">`, which only ever accepts 24-hour text.
+ *
+ * Read off the parish's clock rather than through a formatter: the reader's
+ * locale would turn the same instant into "7:30 PM" and the input would
+ * silently reject it.
+ */
+function timeInputValue(iso: string, timeZone: string): string {
+  const { hour, minute } = zonedParts(iso, timeZone);
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
 function EventDialog({
@@ -138,50 +156,45 @@ function EventDialog({
   event?: EventView;
 }) {
   const router = useRouter();
+  const t = useTranslations("schedules");
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(saveEventAction, {
     onSuccess: () => {
       setOpen(false);
       router.refresh();
     },
-    onError: (message) => toast.error(message),
   });
 
   const day = event ? dayKey(event.starts_at, timezone) : defaultDay;
-  const time = event
-    ? formatTime(event.starts_at, timezone).replace("h", ":")
-    : "19:30";
+  const time = event ? timeInputValue(event.starts_at, timezone) : "19:30";
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {event ? (
-          <Button size="icon" variant="ghost" aria-label="Editar celebração">
+          <Button size="icon" variant="ghost" aria-label={t("events.edit")}>
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
           <Button size="sm">
             <Plus className="h-4 w-4" />
-            Celebração
+            {t("events.add")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>
-            {event ? "Editar celebração" : "Nova celebração"}
+            {event ? t("events.editTitle") : t("events.newTitle")}
           </DialogTitle>
-          <DialogDescription>
-            Use &quot;direto&quot; quando a vaga for pegada pelo próprio acólito,
-            como na novena.
-          </DialogDescription>
+          <DialogDescription>{t("events.dialogDescription")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <input type="hidden" name="scheduleId" value={scheduleId} />
           {event ? <input type="hidden" name="id" value={event.id} /> : null}
 
           <div className="space-y-2">
-            <Label htmlFor="ev-location">Local</Label>
+            <Label htmlFor="ev-location">{t("fields.location")}</Label>
             <FormSelect
               id="ev-location"
               name="locationId"
@@ -193,11 +206,11 @@ function EventDialog({
 
           <div className="grid gap-4 sm:grid-cols-3">
             <div className="space-y-2">
-              <Label htmlFor="ev-day">Data</Label>
+              <Label htmlFor="ev-day">{t("fields.date")}</Label>
               <Input id="ev-day" name="day" type="date" defaultValue={day} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ev-time">Hora</Label>
+              <Label htmlFor="ev-time">{t("fields.time")}</Label>
               <Input
                 id="ev-time"
                 name="time"
@@ -207,7 +220,7 @@ function EventDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ev-slots">Vagas</Label>
+              <Label htmlFor="ev-slots">{t("fields.slots")}</Label>
               <Input
                 id="ev-slots"
                 name="slots"
@@ -222,43 +235,45 @@ function EventDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="ev-kind">Tipo</Label>
+              <Label htmlFor="ev-kind">{t("fields.kind")}</Label>
               <FormSelect
                 id="ev-kind"
                 name="kind"
                 defaultValue={event?.kind ?? "mass"}
                 options={[
-                  { value: "mass", label: "Missa" },
-                  { value: "novena", label: "Novena" },
-                  { value: "special", label: "Celebração especial" },
+                  { value: "mass", label: t("events.kindMass") },
+                  { value: "novena", label: t("events.kindNovena") },
+                  { value: "special", label: t("events.kindSpecial") },
                 ]}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ev-mode">Preenchimento</Label>
+              <Label htmlFor="ev-mode">{t("fields.signupMode")}</Label>
               <FormSelect
                 id="ev-mode"
                 name="signupMode"
                 defaultValue={event?.signup_mode ?? "availability"}
                 options={[
-                  { value: "availability", label: "Coordenador escala" },
-                  { value: "direct", label: "Acólito pega a vaga" },
+                  { value: "availability", label: t("novena.modeCoordinator") },
+                  { value: "direct", label: t("novena.modeDirect") },
                 ]}
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="ev-label">Descrição (opcional)</Label>
+            <Label htmlFor="ev-label">{t("fields.descriptionOptional")}</Label>
             <Input
               id="ev-label"
               name="label"
               defaultValue={event?.label ?? ""}
-              placeholder="Solenidade de Cristo Rei"
+              placeholder={t("events.labelPlaceholder")}
             />
           </div>
 
-          <SubmitButton pending={pending} className="w-full">Salvar</SubmitButton>
+          <SubmitButton pending={pending} className="w-full">
+            {t("save")}
+          </SubmitButton>
         </form>
       </DialogContent>
     </Dialog>
@@ -275,14 +290,14 @@ function NovenaDialog({
   defaultDay: string;
 }) {
   const router = useRouter();
+  const t = useTranslations("schedules");
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(addNovenaAction, {
     onSuccess: () => {
       setOpen(false);
-      toast.success("Novena criada");
+      toast.success(t("novena.created"));
       router.refresh();
     },
-    onError: (message) => toast.error(message),
   });
 
   return (
@@ -290,32 +305,29 @@ function NovenaDialog({
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <CalendarHeart className="h-4 w-4" />
-          Novena
+          {t("novena.add")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nova novena</DialogTitle>
-          <DialogDescription>
-            Cria os dias seguidos de uma vez, com vagas numeradas que o próprio
-            acólito pega — igual à mensagem do grupo.
-          </DialogDescription>
+          <DialogTitle>{t("novena.dialogTitle")}</DialogTitle>
+          <DialogDescription>{t("novena.dialogDescription")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <input type="hidden" name="scheduleId" value={scheduleId} />
 
           <div className="space-y-2">
-            <Label htmlFor="nov-title">Nome</Label>
+            <Label htmlFor="nov-title">{t("fields.name")}</Label>
             <Input
               id="nov-title"
               name="title"
-              placeholder="Novena em honra a Nossa Senhora Aparecida"
+              placeholder={t("novena.namePlaceholder")}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="nov-location">Local</Label>
+            <Label htmlFor="nov-location">{t("fields.location")}</Label>
             <FormSelect
               id="nov-location"
               name="locationId"
@@ -326,7 +338,7 @@ function NovenaDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="nov-day">Primeiro dia</Label>
+              <Label htmlFor="nov-day">{t("fields.firstDay")}</Label>
               <Input
                 id="nov-day"
                 name="firstDay"
@@ -336,7 +348,7 @@ function NovenaDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nov-time">Hora</Label>
+              <Label htmlFor="nov-time">{t("fields.time")}</Label>
               <Input
                 id="nov-time"
                 name="time"
@@ -349,7 +361,7 @@ function NovenaDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="nov-days">Dias</Label>
+              <Label htmlFor="nov-days">{t("fields.days")}</Label>
               <Input
                 id="nov-days"
                 name="days"
@@ -360,7 +372,7 @@ function NovenaDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nov-slots">Vagas por dia</Label>
+              <Label htmlFor="nov-slots">{t("fields.slotsPerDay")}</Label>
               <Input
                 id="nov-slots"
                 name="slots"
@@ -372,7 +384,9 @@ function NovenaDialog({
             </div>
           </div>
 
-          <SubmitButton pending={pending} className="w-full">Criar novena</SubmitButton>
+          <SubmitButton pending={pending} className="w-full">
+            {t("novena.create")}
+          </SubmitButton>
         </form>
       </DialogContent>
     </Dialog>

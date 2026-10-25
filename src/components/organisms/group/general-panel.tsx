@@ -1,11 +1,10 @@
 "use client";
 
-import * as React from "react";
-import { useActionState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
-import { updateParishAction } from "@/app/(app)/grupos/actions";
+import { updateParishAction } from "@/app/(app)/groups/actions";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import {
@@ -17,70 +16,67 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ActionResult } from "@/lib/action-result";
-import type { Parish } from "@/lib/db/types";
-
-const TIMEZONES = [
-  "America/Sao_Paulo",
-  "America/Manaus",
-  "America/Cuiaba",
-  "America/Belem",
-  "America/Fortaleza",
-  "America/Recife",
-  "America/Bahia",
-  "America/Rio_Branco",
-  "America/Boa_Vista",
-  "America/Campo_Grande",
-];
+import { useFormAction } from "@/hooks/use-form-action";
+import type { FillAccess, Parish } from "@/lib/db/types";
+import { TIMEZONE_OPTIONS } from "@/lib/timezones";
 
 export function GeneralPanel({ parish }: { parish: Parish }) {
   const router = useRouter();
-  const [state, action] = useActionState<ActionResult | null, FormData>(
-    updateParishAction,
-    null,
-  );
+  const t = useTranslations("group.general");
+  const common = useTranslations("common");
 
-  React.useEffect(() => {
-    if (state?.ok) {
-      toast.success("Grupo atualizado");
+  const accessOptions: { value: FillAccess; label: string }[] = [
+    { value: "open", label: t("accessOpen") },
+    { value: "members", label: t("accessMembers") },
+  ];
+
+  const { onSubmit, pending } = useFormAction(updateParishAction, {
+    onSuccess: () => {
+      toast.success(t("saved"));
       router.refresh();
-    } else if (state && !state.ok) {
-      toast.error(state.error);
-    }
-  }, [state, router]);
+    },
+  });
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Dados do grupo</CardTitle>
-        <CardDescription>
-          O fuso define o horário que todo mundo vê — inclusive quem abrir o
-          link de outro estado.
-        </CardDescription>
+        <CardTitle className="text-base">{t("title")}</CardTitle>
+        <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="parish-name">Nome</Label>
+            <Label htmlFor="parish-name">{t("nameLabel")}</Label>
             <Input id="parish-name" name="name" defaultValue={parish.name} required />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="parish-tz">Fuso horário</Label>
+            <Label htmlFor="parish-tz">{t("timeZoneLabel")}</Label>
             <FormSelect
               id="parish-tz"
               name="timezone"
               defaultValue={parish.timezone}
-              options={TIMEZONES.map((tz) => ({
-                value: tz,
-                label: tz.replace("America/", "").replace(/_/g, " "),
-              }))}
+              options={TIMEZONE_OPTIONS}
             />
           </div>
           <div className="space-y-2">
-            <Label>Identificador</Label>
+            <Label htmlFor="parish-access">{t("accessLabel")}</Label>
+            <FormSelect
+              id="parish-access"
+              name="fillAccess"
+              defaultValue={parish.fill_access}
+              options={accessOptions}
+            />
+            <p className="text-xs text-muted-foreground">
+              {parish.fill_access === "members"
+                ? t("accessMembersHelp")
+                : t("accessOpenHelp")}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label>{t("slugLabel")}</Label>
             <Input value={parish.slug} readOnly disabled />
           </div>
-          <SubmitButton>Salvar</SubmitButton>
+          <SubmitButton pending={pending}>{common("save")}</SubmitButton>
         </form>
       </CardContent>
     </Card>

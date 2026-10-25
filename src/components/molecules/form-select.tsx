@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 
 import {
   Select,
@@ -16,16 +17,16 @@ export interface SelectOption {
 }
 
 /**
- * O Select do radix não é um `<select>`, então nada dele chega no FormData.
- * Este wrapper mantém um input escondido em sincronia — é o que permite usar
- * `<form action={serverAction}>` sem transformar cada formulário em estado
- * controlado.
+ * Radix's Select is not a `<select>`, so nothing of it reaches the FormData.
+ * This wrapper keeps a hidden input in sync - that is what allows using
+ * `<form action={serverAction}>` without turning every form into controlled
+ * state.
  */
 export function FormSelect({
   name,
   options,
   defaultValue,
-  placeholder = "Selecione",
+  placeholder,
   id,
   required,
   className,
@@ -40,6 +41,7 @@ export function FormSelect({
   className?: string;
   onValueChange?: (value: string) => void;
 }) {
+  const t = useTranslations("shell");
   const [value, setValue] = React.useState(defaultValue ?? "");
 
   return (
@@ -53,7 +55,7 @@ export function FormSelect({
         }}
       >
         <SelectTrigger id={id} className={className ?? "w-full"}>
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder ?? t("select.placeholder")} />
         </SelectTrigger>
         <SelectContent>
           {options.map((o) => (

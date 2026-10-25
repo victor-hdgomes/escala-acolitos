@@ -1,13 +1,7 @@
+import { useTranslations } from "next-intl";
+
 import { Badge } from "@/components/ui/badge";
 import type { ScheduleStatus } from "@/lib/db/types";
-
-const LABEL: Record<ScheduleStatus, string> = {
-  draft: "rascunho",
-  collecting: "coletando",
-  building: "montando",
-  published: "publicada",
-  archived: "arquivada",
-};
 
 const CLASS: Record<ScheduleStatus, string> = {
   draft: "",
@@ -19,10 +13,16 @@ const CLASS: Record<ScheduleStatus, string> = {
   archived: "",
 };
 
+/**
+ * No "use client" on purpose: the schedule list renders on the server and the
+ * detail header renders on the client, and both want the same badge.
+ */
 export function ScheduleStatusBadge({ status }: { status: ScheduleStatus }) {
+  const t = useTranslations("schedules.status");
+
   return (
     <Badge variant="secondary" className={CLASS[status]}>
-      {LABEL[status]}
+      {t(status)}
     </Badge>
   );
 }

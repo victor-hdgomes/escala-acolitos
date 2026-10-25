@@ -1,16 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { SwapView } from "@/components/organisms/swap/swap-view";
-import { formatFullDate, formatTime, weekdayLong } from "@/lib/date";
-import { resolveSwapToken } from "@/lib/public-access";
 import { isPast } from "@/lib/now";
+import { resolveSwapToken } from "@/lib/public-access";
+import { getDateFormatter } from "@/lib/server-date";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = {
-  title: "Substituição",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("swap");
+  return {
+    title: t("title"),
+    robots: { index: false, follow: false },
+  };
+}
 
 export default async function SwapPage({
   params,
@@ -26,10 +30,11 @@ export default async function SwapPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  const tz = ctx.parish.timezone;
+  const t = await getTranslations("swap");
+  const df = await getDateFormatter(ctx.parish.timezone);
 
-  // Candidatos primeiro (marcaram disponibilidade), depois o resto do grupo:
-  // a vaga precisa ser preenchida, não importa quem apareça.
+  // Candidates first (they marked availability), then the rest of the group:
+  // the slot has to be filled, no matter who turns up.
   const candidateIds = new Set(ctx.candidates.map((p) => p.id));
   const toPickable = (p: (typeof ctx.people)[number]) => ({
     id: p.id,
@@ -44,10 +49,14 @@ export default async function SwapPage({
       parishName={ctx.parish.name}
       status={ctx.swap.status}
       reason={ctx.swap.reason}
-      requesterName={ctx.requester?.full_name ?? "Um acólito"}
+      requesterName={ctx.requester?.full_name ?? t("unknownRequester")}
       filledByName={ctx.filledBy?.full_name ?? null}
       locationName={ctx.location.name}
-      whenLabel={`${weekdayLong(ctx.event.starts_at, tz)}, ${formatFullDate(ctx.event.starts_at, tz)} às ${formatTime(ctx.event.starts_at, tz)}`}
+      whenLabel={t("whenLabel", {
+        weekday: df.weekday(ctx.event.starts_at),
+        date: df.fullDate(ctx.event.starts_at),
+        time: df.time(ctx.event.starts_at),
+      })}
       isPast={isPast(ctx.event.starts_at)}
       candidates={ctx.candidates.map(toPickable)}
       others={ctx.people

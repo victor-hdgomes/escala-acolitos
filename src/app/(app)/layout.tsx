@@ -16,6 +16,7 @@ export default async function AppLayout({
     effectiveRole: ctx.effectiveRole,
     parishId: ctx.parish.id,
     parishName: ctx.parish.name,
+    timeZone: ctx.parish.timezone,
     parishes: ctx.memberships.map((m) => ({
       id: m.parish.id,
       name: m.parish.name,

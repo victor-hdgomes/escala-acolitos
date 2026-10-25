@@ -1,7 +1,8 @@
-/** "Paróquia Cristo Rei" → "paroquia-cristo-rei" */
+/** "Saint Mary Parish" → "saint-mary-parish" */
 export function slugify(value: string): string {
   return value
     .normalize("NFD")
+    // Combining diacritical marks, left behind by the NFD decomposition above.
     .replace(/[̀-ͯ]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
@@ -9,9 +10,9 @@ export function slugify(value: string): string {
     .slice(0, 48);
 }
 
-/** Acrescenta sufixo numérico até achar um slug livre. */
+/** Appends a numeric suffix until it finds a free slug. */
 export function uniqueSlug(base: string, taken: Set<string>): string {
-  const root = base || "grupo";
+  const root = base || "group";
   if (!taken.has(root)) return root;
   for (let i = 2; i < 200; i++) {
     const candidate = `${root}-${i}`;

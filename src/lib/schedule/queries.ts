@@ -2,7 +2,8 @@ import "server-only";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { dayKey, formatDayMonth, weekdayLong } from "@/lib/date";
+import { dayKey } from "@/lib/date";
+import { getDateFormatter } from "@/lib/server-date";
 import type {
   Assignment,
   Availability,
@@ -25,6 +26,13 @@ import type {
 
 export type Db = SupabaseClient<Database>;
 
+/**
+ * Names sort with accents folded, so "Álvaro" lands next to "Alvaro". Pinned to
+ * one collation rather than the reader's, so a list rendered on the server and
+ * re-rendered in the browser keeps the same order.
+ */
+const byName = new Intl.Collator("en", { sensitivity: "base" });
+
 export function toLite(p: Person): PersonLite {
   return {
     id: p.id,
@@ -46,11 +54,11 @@ function locationLite(l: Location): LocationLite {
 }
 
 /**
- * Monta a escala inteira numa estrutura pronta para renderizar.
+ * Assembles the whole schedule into a structure ready to render.
  *
- * Faz várias queries pequenas em vez de um join aninhado: o tipo do
- * supabase-js para join embutido é frágil e a escala de um mês tem ~40
- * celebrações, então o custo é irrelevante e o código fica legível.
+ * Several small queries instead of one nested join: the supabase-js type for an
+ * embedded join is fragile and a month's schedule has ~40 celebrations, so the
+ * cost is irrelevant and the code stays readable.
  */
 export async function loadScheduleDetail(
   db: Db,
@@ -150,18 +158,21 @@ export async function loadScheduleDetail(
       slots: ev.slots,
       location: locationsById.get(ev.location_id) ?? {
         id: ev.location_id,
-        name: "—",
+        name: "-",
         short_name: null,
         color: "#888888",
         sort_order: 99,
       },
       slotsView,
       availablePeople: (availByEvent.get(ev.id) ?? []).sort((a, b) =>
-        a.full_name.localeCompare(b.full_name, "pt-BR"),
+        byName.compare(a.full_name, b.full_name),
       ),
     };
   });
 
+  // The day headings are the one piece of copy this loader produces, so it
+  // needs the reader's language as well as the parish's zone.
+  const df = await getDateFormatter(timezone);
   const days: DayGroup[] = [];
   for (const view of views) {
     const key = dayKey(view.starts_at, timezone);
@@ -169,8 +180,8 @@ export async function loadScheduleDetail(
     if (!group) {
       group = {
         key,
-        label: formatDayMonth(view.starts_at, timezone),
-        weekday: weekdayLong(view.starts_at, timezone),
+        label: df.dayMonth(view.starts_at),
+        weekday: df.weekday(view.starts_at),
         events: [],
       };
       days.push(group);
@@ -187,12 +198,12 @@ export async function loadScheduleDetail(
 }
 
 /**
- * Agrega o histórico que alimenta a sugestão.
+ * Aggregates the history that feeds the suggestion.
  *
- * `monthCount` olha só a escala em montagem (é o que o coordenador está
- * equilibrando agora); `recentCount` e `daysSinceLast` olham os últimos 90
- * dias de todas as escalas, para não repetir sempre as mesmas pessoas mês
- * após mês.
+ * `monthCount` looks only at the schedule being built (that is what the
+ * coordinator is balancing right now); `recentCount` and `daysSinceLast` look
+ * at the last 90 days across every schedule, so the same people are not picked
+ * month after month.
  */
 export async function loadPersonStats(
   db: Db,
@@ -289,14 +300,14 @@ export async function loadPersonStats(
 }
 
 /**
- * Quem já está escalado, no mesmo dia, em OUTRAS escalas da paróquia.
+ * Who is already scheduled, on the same day, on OTHER schedules of the parish.
  *
- * Desde que a novena pode ter escala própria, duas escalas convivem no mesmo
- * mês — e sem isto o app sugeriria tranquilamente a mesma pessoa para a missa
- * das 19h30 e para a novena das 19h30 do mesmo dia.
+ * Since a novena can have a schedule of its own, two schedules live side by
+ * side in the same month - and without this the app would happily suggest the
+ * same person for the 7:30 PM Mass and the 7:30 PM novena on the same day.
  *
- * A busca é limitada à janela de datas da escala em montagem; o histórico
- * inteiro não interessa aqui.
+ * The search is limited to the date window of the schedule being built; the
+ * whole history is of no interest here.
  */
 export async function loadBusyDaysFromOtherSchedules(
   db: Db,
@@ -344,7 +355,7 @@ export async function loadBusyDaysFromOtherSchedules(
   return out;
 }
 
-/** Lista de acólitos ativos da paróquia, em ordem alfabética. */
+/** The parish's active altar servers, in alphabetical order. */
 export async function loadPeople(db: Db, parishId: string): Promise<Person[]> {
   const { data } = await db
     .from("people")

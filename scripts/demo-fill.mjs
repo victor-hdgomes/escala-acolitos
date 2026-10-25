@@ -1,13 +1,13 @@
 /**
- * Preenche uma escala com dados plausíveis, para ver o app funcionando sem
- * precisar de 54 pessoas respondendo um formulário.
+ * Fills a schedule with plausible data, so the app can be seen working
+ * without fifty-four people answering a form first.
  *
  *   node scripts/demo-fill.mjs 2026-11            disponibilidades + montagem
- *   node scripts/demo-fill.mjs 2026-11 --reset    apaga o que havia antes
+ *   node scripts/demo-fill.mjs 2026-11 --reset    clears what was there
  *   node scripts/demo-fill.mjs 2026-11 --only-availability
  *
- * O sorteio é determinístico (semente fixa), então rodar de novo dá o mesmo
- * resultado — o que torna a tela comparável entre execuções.
+ * The draw is deterministic (fixed seed), so running it again produces the
+ * same result, which is what makes two runs of a screen comparable.
  */
 
 import fs from "node:fs";
@@ -41,7 +41,7 @@ async function rest(pathname, { method = "GET", body, prefer } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-/** PRNG com semente: o mesmo comando produz sempre a mesma escala. */
+/** Seeded PRNG: the same command always produces the same schedule. */
 function rng(seed) {
   let s = seed >>> 0;
   return () => {
@@ -59,7 +59,7 @@ const [schedule] = await rest(
   `schedules?month=eq.${monthIso}&select=id,title,status,parish_id&order=created_at&limit=1`,
 );
 if (!schedule) {
-  console.error(`Nenhuma escala em ${month}.`);
+  console.error(`No schedule for ${month}.`);
   process.exit(1);
 }
 
@@ -74,7 +74,7 @@ if (reset) {
   const ids = events.map((e) => e.id).join(",");
   await rest(`assignments?event_id=in.(${ids})`, { method: "DELETE" });
   await rest(`availabilities?event_id=in.(${ids})`, { method: "DELETE" });
-  console.log("limpo: disponibilidades e escalações anteriores");
+  console.log("cleared: earlier availabilities and assignments");
 }
 
 const random = rng(20261101);
@@ -82,8 +82,9 @@ const openEvents = events.filter((e) => e.signup_mode === "availability");
 const directEvents = events.filter((e) => e.signup_mode === "direct");
 
 // ── Disponibilidades ────────────────────────────────────────────────────
-// Perfis diferentes de gente real: quem marca quase tudo, quem marca três
-// datas e quem some. É o que faz o painel de respostas ter o que mostrar.
+// The shapes real people come in: the one who marks nearly everything, the
+// one who marks three dates and the one who vanishes. It is what gives the
+// responses panel something to show.
 const availabilities = [];
 let silent = 0;
 for (const person of people) {
@@ -107,15 +108,15 @@ for (let i = 0; i < availabilities.length; i += 500) {
   });
 }
 console.log(
-  `${availabilities.length} disponibilidades · ${people.length - silent} responderam · ${silent} não responderam`,
+  `${availabilities.length} availabilities, ${people.length - silent} answered, ${silent} did not`,
 );
 
-// ── Novena: quem pega a vaga direto ─────────────────────────────────────
+// Novena: the slots the altar servers claim themselves.
 const directAssignments = [];
 for (const event of directEvents) {
   const taken = new Set();
   for (let position = 1; position <= event.slots; position++) {
-    if (random() < 0.35) continue; // nem toda vaga de novena é preenchida
+    if (random() < 0.35) continue; // not every novena slot gets claimed
     let person;
     do {
       person = people[Math.floor(random() * people.length)];
@@ -136,7 +137,7 @@ if (onlyAvailability) {
 }
 
 // ── Montagem ────────────────────────────────────────────────────────────
-// Mesma ideia do rankCandidates: equilibra o mês e evita escalar a mesma
+// Same idea as rankCandidates: balance the month and avoid scheduling the same
 // pessoa duas vezes no mesmo dia.
 const availableByEvent = new Map();
 for (const a of availabilities) {
@@ -193,4 +194,4 @@ const max = Math.max(...count.values());
 const min = Math.min(...[...count.values()].filter((n) => n > 0));
 
 console.log(`${assignments.length} de ${totalSlots} vagas preenchidas`);
-console.log(`${served} acólitos escalados · entre ${min} e ${max} missas cada`);
+console.log(`${served} altar servers scheduled, between ${min} and ${max} Masses each`);

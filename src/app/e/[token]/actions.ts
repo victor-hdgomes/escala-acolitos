@@ -3,18 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { fail, ok, type ActionResult } from "@/lib/action-result";
+import {
+  ERROR_CODES,
+  fail,
+  ok,
+  type ActionResult,
+  type ErrorCode,
+} from "@/lib/action-result";
 import { logAudit } from "@/lib/audit";
 import { canActAsPerson, resolveFillToken } from "@/lib/public-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Ações do link público.
+ * Public link actions.
  *
- * Nada aqui confia num id vindo do cliente: o token resolve a escala, e só
- * então event_id e person_id são conferidos contra ela. Sem isso, qualquer um
- * com um link válido escreveria em qualquer escala do banco.
+ * Nothing here trusts an id coming from the client: the token resolves the
+ * schedule, and only then are event_id and person_id checked against it.
+ * Without that, anyone holding a valid link could write to any schedule in the
+ * database.
  */
 
 const MAX_BATCH = 200;
@@ -27,7 +34,14 @@ async function currentUserId(): Promise<string | null> {
   return user?.id ?? null;
 }
 
-/** Marca ou desmarca disponibilidade — uma celebração ou o lote dos filtros. */
+/** Tells the reader which of the two reasons closed the schedule. */
+function closedCode(reason: "deadline" | "status" | null): ErrorCode {
+  return reason === "deadline"
+    ? ERROR_CODES.FILL_CLOSED_DEADLINE
+    : ERROR_CODES.FILL_CLOSED_STATUS;
+}
+
+/** Marks or unmarks availability - one celebration, or the filtered batch. */
 export async function setAvailabilityAction(input: {
   token: string;
   personId: string;
@@ -42,29 +56,21 @@ export async function setAvailabilityAction(input: {
       value: z.boolean(),
     })
     .safeParse(input);
-  if (!parsed.success) return fail("Pedido inválido.");
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
 
   const ctx = await resolveFillToken(parsed.data.token);
-  if (!ctx) return fail("Link inválido.");
-  if (!ctx.open) {
-    return fail(
-      ctx.closedReason === "deadline"
-        ? "O prazo de preenchimento terminou."
-        : "Esta escala não está aberta para preenchimento.",
-    );
-  }
+  if (!ctx) return fail(ERROR_CODES.INVALID_LINK);
+  if (!ctx.open) return fail(closedCode(ctx.closedReason));
 
   const person = ctx.people.find((p) => p.id === parsed.data.personId);
-  if (!person) return fail("Nome não encontrado nesta escala.");
+  if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
 
   const userId = await currentUserId();
   if (!canActAsPerson(person, userId)) {
-    return fail(
-      "Esse nome está vinculado a uma conta. Entre com ela para marcar.",
-    );
+    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
 
-  // Só celebrações desta escala, e só as que coletam disponibilidade.
+  // Only celebrations from this schedule, and only those collecting availability.
   const allowed = new Set(
     ctx.detail.days
       .flatMap((d) => d.events)
@@ -72,7 +78,7 @@ export async function setAvailabilityAction(input: {
       .map((e) => e.id),
   );
   const eventIds = parsed.data.eventIds.filter((id) => allowed.has(id));
-  if (!eventIds.length) return fail("Nenhuma celebração válida.");
+  if (!eventIds.length) return fail(ERROR_CODES.NO_VALID_CELEBRATION);
 
   const admin = createAdminClient();
   if (parsed.data.value) {
@@ -84,14 +90,14 @@ export async function setAvailabilityAction(input: {
       })),
       { onConflict: "event_id,person_id", ignoreDuplicates: true },
     );
-    if (error) return fail("Não foi possível salvar.");
+    if (error) return fail(ERROR_CODES.AVAILABILITY_SAVE_FAILED);
   } else {
     const { error } = await admin
       .from("availabilities")
       .delete()
       .eq("person_id", person.id)
       .in("event_id", eventIds);
-    if (error) return fail("Não foi possível salvar.");
+    if (error) return fail(ERROR_CODES.AVAILABILITY_SAVE_FAILED);
   }
 
   await logAudit({
@@ -109,9 +115,10 @@ export async function setAvailabilityAction(input: {
 }
 
 /**
- * Novena e afins: a pessoa pega a vaga direto, sem passar pelo coordenador.
- * A corrida entre dois cliques simultâneos é resolvida pelo índice único
- * (event_id, position) — o segundo recebe 23505 e vê "já foi preenchida".
+ * Novena and the like: the person takes the slot straight away, without going
+ * through the coordinator. A race between two simultaneous taps is settled by
+ * the unique index on (event_id, position) - the second one gets 23505 and is
+ * told the slot has just been taken.
  */
 export async function claimDirectSlotAction(input: {
   token: string;
@@ -127,30 +134,32 @@ export async function claimDirectSlotAction(input: {
       position: z.number().int().min(1).max(12),
     })
     .safeParse(input);
-  if (!parsed.success) return fail("Pedido inválido.");
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
 
   const ctx = await resolveFillToken(parsed.data.token);
-  if (!ctx) return fail("Link inválido.");
-  if (!ctx.open) return fail("Esta escala não está aberta.");
+  if (!ctx) return fail(ERROR_CODES.INVALID_LINK);
+  if (!ctx.open) return fail(closedCode(ctx.closedReason));
 
   const person = ctx.people.find((p) => p.id === parsed.data.personId);
-  if (!person) return fail("Nome não encontrado.");
+  if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
 
   const userId = await currentUserId();
   if (!canActAsPerson(person, userId)) {
-    return fail("Esse nome está vinculado a uma conta. Entre com ela.");
+    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
 
   const event = ctx.detail.days
     .flatMap((d) => d.events)
     .find((e) => e.id === parsed.data.eventId);
-  if (!event) return fail("Celebração não encontrada.");
+  if (!event) return fail(ERROR_CODES.EVENT_NOT_FOUND);
   if (event.signup_mode !== "direct") {
-    return fail("Esta celebração é preenchida pelo coordenador.");
+    return fail(ERROR_CODES.COORDINATOR_ASSIGNS_THIS);
   }
-  if (parsed.data.position > event.slots) return fail("Vaga inexistente.");
+  if (parsed.data.position > event.slots) {
+    return fail(ERROR_CODES.SLOT_DOES_NOT_EXIST);
+  }
   if (event.slotsView.some((s) => s.person?.id === person.id)) {
-    return fail("Você já está nesta celebração.");
+    return fail(ERROR_CODES.ALREADY_IN_CELEBRATION);
   }
 
   const admin = createAdminClient();
@@ -163,8 +172,8 @@ export async function claimDirectSlotAction(input: {
   if (error) {
     return fail(
       error.code === "23505"
-        ? "Essa vaga acabou de ser preenchida."
-        : "Não foi possível pegar a vaga.",
+        ? ERROR_CODES.SLOT_TAKEN
+        : ERROR_CODES.CLAIM_SLOT_FAILED,
     );
   }
 
@@ -182,7 +191,7 @@ export async function claimDirectSlotAction(input: {
   return ok();
 }
 
-/** Libera a própria vaga de uma celebração de preenchimento direto. */
+/** Releases your own slot on a direct-signup celebration. */
 export async function releaseDirectSlotAction(input: {
   token: string;
   personId: string;
@@ -195,25 +204,25 @@ export async function releaseDirectSlotAction(input: {
       eventId: z.string().uuid(),
     })
     .safeParse(input);
-  if (!parsed.success) return fail("Pedido inválido.");
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
 
   const ctx = await resolveFillToken(parsed.data.token);
-  if (!ctx) return fail("Link inválido.");
-  if (!ctx.open) return fail("Esta escala não está aberta.");
+  if (!ctx) return fail(ERROR_CODES.INVALID_LINK);
+  if (!ctx.open) return fail(closedCode(ctx.closedReason));
 
   const person = ctx.people.find((p) => p.id === parsed.data.personId);
-  if (!person) return fail("Nome não encontrado.");
+  if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
 
   const userId = await currentUserId();
   if (!canActAsPerson(person, userId)) {
-    return fail("Esse nome está vinculado a uma conta. Entre com ela.");
+    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
 
   const event = ctx.detail.days
     .flatMap((d) => d.events)
     .find((e) => e.id === parsed.data.eventId);
   if (!event || event.signup_mode !== "direct") {
-    return fail("Celebração não encontrada.");
+    return fail(ERROR_CODES.EVENT_NOT_FOUND);
   }
 
   const admin = createAdminClient();
@@ -222,7 +231,7 @@ export async function releaseDirectSlotAction(input: {
     .delete()
     .eq("event_id", event.id)
     .eq("person_id", person.id);
-  if (error) return fail("Não foi possível liberar a vaga.");
+  if (error) return fail(ERROR_CODES.RELEASE_SLOT_FAILED);
 
   await logAudit({
     parishId: ctx.parish.id,

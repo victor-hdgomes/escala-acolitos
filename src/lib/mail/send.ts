@@ -4,15 +4,17 @@ import { Resend } from "resend";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const FROM = process.env.RESEND_FROM ?? "Escala <onboarding@resend.dev>";
+// The From header is one per deployment, not per reader, so it is configured
+// rather than translated.
+const FROM = process.env.RESEND_FROM ?? "Altar Roster <onboarding@resend.dev>";
 
 /**
- * Envio com idempotência.
+ * Sending, with idempotence.
  *
- * `dedupeKey` é único em `email_log`: se o cron do lembrete rodar duas vezes,
- * ou o coordenador clicar duas vezes em "avisar", o segundo envio é descartado
- * antes de chamar o provedor. Grava primeiro, envia depois — ao contrário,
- * uma falha de gravação viraria e-mail duplicado.
+ * `dedupeKey` is unique in `email_log`: if the reminder cron runs twice, or the
+ * coordinator clicks "notify" twice, the second send is dropped before the
+ * provider is called. It writes first and sends after - the other way round, a
+ * failed write would mean a duplicate e-mail.
  */
 export async function sendMail({
   to,
@@ -42,7 +44,7 @@ export async function sendMail({
     person_id: personId ?? null,
     dedupe_key: dedupeKey,
   });
-  // 23505 = unique_violation: já foi enviado antes.
+  // 23505 = unique_violation: it was already sent before.
   if (logError) return logError.code === "23505" ? "duplicate" : "error";
 
   try {
@@ -59,7 +61,7 @@ export async function sendMail({
   } catch (err) {
     await admin
       .from("email_log")
-      .update({ error: err instanceof Error ? err.message : "erro" })
+      .update({ error: err instanceof Error ? err.message : "unknown error" })
       .eq("dedupe_key", dedupeKey);
     return "error";
   }

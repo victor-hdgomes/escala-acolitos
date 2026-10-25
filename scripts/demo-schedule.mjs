@@ -1,14 +1,14 @@
 /**
- * Cria uma escala de demonstração a partir da grade semanal do grupo.
+ * Creates a demo schedule from the group's weekly Mass pattern.
  *
- * Serve para ver o app rodando com dados reais sem precisar clicar na
- * coordenação. Usa a API REST com a service role, então roda sem conexão
+ * For seeing the app run on real-looking data without clicking through the
+ * coordination screens. Uses the REST API with the service role, so it runs
  * direta ao Postgres.
  *
  *   node scripts/demo-schedule.mjs 2026-11
- *   node scripts/demo-schedule.mjs 2026-11 --reset   apaga a do mesmo mês antes
+ *   node scripts/demo-schedule.mjs 2026-11 --reset   drops that month first
  *
- * Imprime no fim os links públicos de preenchimento e de visualização.
+ * Prints the public fill and view links at the end.
  */
 
 import fs from "node:fs";
@@ -48,7 +48,7 @@ async function rest(pathname, { method = "GET", body, prefer } = {}) {
   return text ? JSON.parse(text) : null;
 }
 
-// ── fuso: mesma lógica de src/lib/date.ts, sem TypeScript ────────────────
+// Time zone: the same logic as src/lib/date.ts, without the TypeScript.
 function partsIn(date, timeZone) {
   const dtf = new Intl.DateTimeFormat("en-US", {
     timeZone, hour12: false,
@@ -75,20 +75,20 @@ function zonedTimeToUtc(year, month, day, hour, minute, timeZone) {
   return result;
 }
 
-const MONTHS = ["janeiro","fevereiro","março","abril","maio","junho","julho",
+const MONTHS = ["January","February","March","April","May","June","July",
   "agosto","setembro","outubro","novembro","dezembro"];
 
 const monthArg = process.argv[2] ?? "2026-11";
 const reset = process.argv.includes("--reset");
 if (!/^\d{4}-\d{2}$/.test(monthArg)) {
-  console.error("Informe o mês como AAAA-MM, ex.: node scripts/demo-schedule.mjs 2026-11");
+  console.error("Give the month as YYYY-MM, e.g. node scripts/demo-schedule.mjs 2026-11");
   process.exit(1);
 }
 const monthIso = `${monthArg}-01`;
 
 const [parish] = await rest("parishes?select=id,name,timezone&order=created_at&limit=1");
 if (!parish) {
-  console.error("Nenhum grupo no banco. Rode supabase/setup.sql antes.");
+  console.error("No group in the database. Run supabase/setup.sql first.");
   process.exit(1);
 }
 
@@ -100,14 +100,15 @@ const templates = await rest(
   `mass_templates?parish_id=eq.${parish.id}&active=eq.true&select=location_id,weekday,start_time,slots,label`,
 );
 if (!templates.length) {
-  console.error("Grade semanal vazia. Cadastre as missas fixas em /grupo.");
+  console.error("The weekly pattern is empty. Add the recurring Masses in /group.");
   process.exit(1);
 }
 
 const [year, month] = monthArg.split("-").map(Number);
 const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
 
-// Prazo: a sexta-feira anterior ao início do mês, como o ministério já faz.
+// Deadline: the Friday before the month starts, which is what the ministry
+// already does.
 const deadline = (() => {
   const d = new Date(Date.UTC(year, month - 1, 1));
   do { d.setUTCDate(d.getUTCDate() - 1); } while (d.getUTCDay() !== 5);
@@ -121,12 +122,12 @@ const [schedule] = await rest("schedules", {
   prefer: "return=representation",
   body: [{
     parish_id: parish.id,
-    title: `Escala Mensal | ${MONTHS[month - 1].replace(/^./, (c) => c.toUpperCase())} de ${year}`,
+    title: `Monthly schedule | ${MONTHS[month - 1]} ${year}`,
     month: monthIso,
     status: "collecting",
     availability_deadline: deadline,
     intro_note:
-      "Coloque todas as suas disponibilidades para que possamos organizar a escala com calma.",
+      "Mark every date you can serve, so we can put the schedule together without a rush.",
   }],
 });
 
@@ -150,7 +151,7 @@ for (let day = 1; day <= lastDay; day++) {
 await rest("events", { method: "POST", body: events });
 
 console.log(`✓ ${schedule.title}`);
-console.log(`  ${events.length} celebrações · prazo ${new Date(deadline).toLocaleDateString("pt-BR", { timeZone: parish.timezone })}`);
+console.log(`  ${events.length} celebrations, deadline ${new Date(deadline).toLocaleDateString("en-GB", { timeZone: parish.timezone })}`);
 console.log();
 console.log(`  preencher:  ${APP}/e/${schedule.fill_token}`);
 console.log(`  publicada:  ${APP}/v/${schedule.view_token}`);

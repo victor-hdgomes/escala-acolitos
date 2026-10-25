@@ -10,6 +10,7 @@ import {
   Repeat2,
   UserRound,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { requestSwapPublicAction } from "@/app/v/[token]/actions";
@@ -27,6 +28,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import { useErrorMessage } from "@/hooks/use-error-message";
 import { copyToClipboard, whatsAppUrl } from "@/lib/client-utils";
 import { cn } from "@/lib/utils";
 
@@ -57,7 +59,7 @@ interface PublishedDay {
   events: PublishedEvent[];
 }
 
-const STORAGE_PREFIX = "escala:pessoa-vista:";
+const STORAGE_PREFIX = "altar:published-person:";
 
 export function PublishedView({
   token,
@@ -76,6 +78,8 @@ export function PublishedView({
   people: PickablePerson[];
   todayKey: string;
 }) {
+  const t = useTranslations("published");
+  const tCommon = useTranslations("common");
   const [person, setPerson] = React.useState<PickablePerson | null>(
     () => people.find((p) => p.isMe) ?? null,
   );
@@ -86,17 +90,17 @@ export function PublishedView({
     slot: PublishedSlot;
   } | null>(null);
 
-  // Lê o localStorage só depois de montar: no servidor ele não existe, e um
-  // valor lido direto na renderização quebraria a hidratação.
+  // Read localStorage only after mounting: it does not exist on the server,
+  // and a value read during render would break hydration.
   React.useEffect(() => {
     if (person) return;
     try {
       const stored = localStorage.getItem(STORAGE_PREFIX + token);
       const found = stored ? people.find((p) => p.id === stored) : null;
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage é sistema externo
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- storage is an external system
       if (found) setPerson(found);
     } catch {
-      // storage bloqueado — segue sem lembrar
+      // storage blocked - carry on without remembering
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -106,7 +110,7 @@ export function PublishedView({
     try {
       localStorage.setItem(STORAGE_PREFIX + token, person.id);
     } catch {
-      // ignora
+      // ignore
     }
   }, [person, token]);
 
@@ -153,12 +157,12 @@ export function PublishedView({
             onClick={() => setPickerOpen(true)}
           >
             <UserRound className="h-4 w-4" />
-            {person ? person.name : "Marcar meu nome"}
+            {person ? person.name : t("identifyAction")}
           </Button>
           {person ? (
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
               <Switch checked={onlyMine} onCheckedChange={setOnlyMine} />
-              Só as minhas ({myCount})
+              {t("onlyMineToggle", { count: myCount })}
             </label>
           ) : null}
         </div>
@@ -171,7 +175,7 @@ export function PublishedView({
                 {day.weekdayLabel}
               </span>
               {day.key === todayKey ? (
-                <Badge variant="secondary">hoje</Badge>
+                <Badge variant="secondary">{tCommon("today")}</Badge>
               ) : null}
             </div>
 
@@ -204,7 +208,9 @@ export function PublishedView({
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {event.locationName}
                       </span>
-                      {isMine ? <Badge variant="secondary">você</Badge> : null}
+                      {isMine ? (
+                        <Badge variant="secondary">{tCommon("you")}</Badge>
+                      ) : null}
                     </div>
 
                     {event.label ? (
@@ -215,7 +221,7 @@ export function PublishedView({
 
                     {names.length === 0 ? (
                       <p className="text-sm text-muted-foreground">
-                        Sem acólitos escalados
+                        {t("eventEmptyState")}
                       </p>
                     ) : (
                       <ul className="space-y-1">
@@ -246,7 +252,7 @@ export function PublishedView({
                                 >
                                   <a href={`/t/${slot.swapToken}`}>
                                     <Repeat2 className="h-3.5 w-3.5" />
-                                    precisa de troca
+                                    {t("swapOpenLink")}
                                   </a>
                                 </Button>
                               ) : mine && !event.isPast ? (
@@ -257,7 +263,7 @@ export function PublishedView({
                                   onClick={() => setSwapTarget({ event, slot })}
                                 >
                                   <Repeat2 className="h-3.5 w-3.5" />
-                                  não vou conseguir
+                                  {t("swapRequestAction")}
                                 </Button>
                               ) : null}
                             </li>
@@ -274,9 +280,7 @@ export function PublishedView({
 
         {visibleDays.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
-            {onlyMine
-              ? "Você não está escalado neste mês."
-              : "Escala sem celebrações."}
+            {onlyMine ? t("emptyStateMine") : t("emptyState")}
           </p>
         ) : null}
       </div>
@@ -289,7 +293,7 @@ export function PublishedView({
         onOpenChange={setPickerOpen}
       />
 
-      {/* Remonta por pedido: motivo e link nascem limpos. */}
+      {/* Remounted per request: reason and link start clean. */}
       <SwapDialog
         key={swapTarget?.slot.assignmentId ?? "none"}
         token={token}
@@ -302,9 +306,9 @@ export function PublishedView({
 }
 
 /**
- * O diálogo fica montado e só alterna `open`. Remontá-lo ao abrir fazia ele
- * fechar sozinho: o `pointerup` do clique que o abriu chega depois da
- * montagem e o Radix o lê como clique fora. A key vai no corpo.
+ * The dialog stays mounted and only toggles `open`. Remounting it on open made
+ * it close by itself: the `pointerup` of the click that opened it lands after
+ * the mount, and Radix reads that as a click outside. The key goes on the body.
  */
 function SwapDialog({
   token,
@@ -342,18 +346,30 @@ function SwapDialogBody({
   target: { event: PublishedEvent; slot: PublishedSlot };
   monthTitle: string;
 }) {
+  const t = useTranslations("published");
+  const tCommon = useTranslations("common");
+  const errorMessage = useErrorMessage();
   const router = useRouter();
   const [reason, setReason] = React.useState("");
   const [pending, startTransition] = React.useTransition();
   const [url, setUrl] = React.useState<string | null>(null);
 
+  const whenLabel = t("swapDialog.whenLabel", {
+    time: target.event.timeLabel,
+    location: target.event.locationName,
+  });
+
   const message = [
-    "🔄 *Preciso de substituição*",
+    t("swapDialog.shareHeading"),
     "",
-    `${target.event.timeLabel} · ${target.event.locationName} (${monthTitle})`,
-    reason ? `Motivo: ${reason}` : "",
+    t("swapDialog.shareDetails", {
+      time: target.event.timeLabel,
+      location: target.event.locationName,
+      month: monthTitle,
+    }),
+    reason ? t("swapDialog.shareReason", { reason }) : "",
     "",
-    "Quem puder assumir, é só abrir e confirmar:",
+    t("swapDialog.shareCall"),
     url ?? "",
   ]
     .filter(Boolean)
@@ -368,7 +384,7 @@ function SwapDialogBody({
         reason: reason.trim() || undefined,
       });
       if (!res.ok) {
-        toast.error(res.error);
+        toast.error(errorMessage(res.code, res.params));
         return;
       }
       setUrl(res.data!.url);
@@ -379,27 +395,22 @@ function SwapDialogBody({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Pedir substituição</DialogTitle>
-        <DialogDescription>
-          {`${target.event.timeLabel} · ${target.event.locationName}`}
-        </DialogDescription>
+        <DialogTitle>{t("swapDialog.title")}</DialogTitle>
+        <DialogDescription>{whenLabel}</DialogDescription>
       </DialogHeader>
 
       {url ? (
         <div className="space-y-3">
-          <p className="text-sm">
-            Pedido aberto. Mande o link no grupo — quem clicar primeiro assume a
-            vaga.
-          </p>
+          <p className="text-sm">{t("swapDialog.openedState")}</p>
           <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 p-2">
             <code className="min-w-0 flex-1 truncate text-xs">{url}</code>
             <Button
               size="icon"
               variant="ghost"
-              aria-label="Copiar link"
+              aria-label={t("swapDialog.copyLink")}
               onClick={() => {
                 void copyToClipboard(url);
-                toast.success("Link copiado");
+                toast.success(tCommon("copied"));
               }}
             >
               <Copy className="h-4 w-4" />
@@ -412,7 +423,7 @@ function SwapDialogBody({
               rel="noopener noreferrer"
             >
               <MessageCircle className="h-4 w-4" />
-              Mandar no WhatsApp
+              {tCommon("shareOnWhatsApp")}
             </a>
           </Button>
         </div>
@@ -423,16 +434,15 @@ function SwapDialogBody({
             onChange={(e) => setReason(e.target.value)}
             rows={3}
             maxLength={280}
-            placeholder="Motivo (opcional)"
+            placeholder={t("swapDialog.reasonPlaceholder")}
             className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
           />
           <Button className="w-full" disabled={pending} onClick={submit}>
             {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            Abrir pedido
+            {t("swapDialog.submitAction")}
           </Button>
           <p className="text-xs text-muted-foreground">
-            Quem marcou disponibilidade para esse horário recebe um aviso por
-            e-mail.
+            {t("swapDialog.notice")}
           </p>
         </div>
       )}

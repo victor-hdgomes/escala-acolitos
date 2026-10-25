@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Loader2,
@@ -13,8 +14,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { assignAction, autoFillEventAction } from "@/app/(app)/escalas/actions";
+import { assignAction, autoFillEventAction } from "@/app/(app)/schedules/actions";
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
+import { useDateFormatter } from "@/components/providers/timezone-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,7 +28,7 @@ import {
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { formatTime } from "@/lib/date";
+import { useResultError } from "@/hooks/use-error-message";
 import { rankCandidates, type Suggestion } from "@/lib/schedule/suggest";
 import type { EventView } from "@/lib/schedule/types";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,9 @@ export function AssemblyTab({
   busyByDay,
 }: ScheduleViewProps) {
   const router = useRouter();
+  const t = useTranslations("schedules");
+  const df = useDateFormatter();
+  const resultError = useResultError();
   const [slot, setSlot] = React.useState<OpenSlot | null>(null);
   const [pending, startTransition] = React.useTransition();
   const [onlyIncomplete, setOnlyIncomplete] = React.useState(false);
@@ -65,14 +70,15 @@ export function AssemblyTab({
   const autoFill = (event: EventView) =>
     startTransition(async () => {
       const res = await autoFillEventAction(event.id, detail.schedule.id);
-      if (!res.ok) {
-        toast.error(res.error);
+      const message = resultError(res);
+      if (message) {
+        toast.error(message);
         return;
       }
       toast.success(
-        res.data?.filled
-          ? `${res.data.filled} ${res.data.filled === 1 ? "vaga preenchida" : "vagas preenchidas"}`
-          : "Ninguém disponível para as vagas livres",
+        t("assembly.autoFillResult", {
+          count: res.ok ? (res.data?.filled ?? 0) : 0,
+        }),
       );
       router.refresh();
     });
@@ -85,7 +91,8 @@ export function AssemblyTab({
         personId: null,
         scheduleId: detail.schedule.id,
       });
-      if (!res.ok) toast.error(res.error);
+      const message = resultError(res);
+      if (message) toast.error(message);
       else router.refresh();
     });
 
@@ -93,7 +100,7 @@ export function AssemblyTab({
     <div className="space-y-4">
       <label className="flex items-center gap-2 text-sm text-muted-foreground">
         <Switch checked={onlyIncomplete} onCheckedChange={setOnlyIncomplete} />
-        Só celebrações com vaga livre
+        {t("assembly.onlyIncomplete")}
       </label>
 
       {days.map((day) => (
@@ -106,8 +113,8 @@ export function AssemblyTab({
           <div className="space-y-3">
             {day.events.map((event) => {
               const empty = event.slotsView.filter((s) => !s.person).length;
-              // Em preenchimento direto ninguém marca disponibilidade — o
-              // contador de candidatos é sempre zero e o alerta seria ruído.
+              // In direct sign-up nobody marks availability - the candidate
+              // count is always zero and the warning would be noise.
               const shortOnCandidates =
                 event.signup_mode === "availability" &&
                 event.availablePeople.length < event.slots;
@@ -124,7 +131,7 @@ export function AssemblyTab({
                       aria-hidden
                     />
                     <span className="text-sm font-medium tabular-nums">
-                      {formatTime(event.starts_at, detail.timezone)}
+                      {df.time(event.starts_at)}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-sm">
                       {event.location.name}
@@ -134,7 +141,7 @@ export function AssemblyTab({
                         variant="secondary"
                         className="bg-[color:var(--color-novena)]/15 text-[color:var(--color-novena)]"
                       >
-                        direto
+                        {t("badges.direct")}
                       </Badge>
                     ) : null}
                     <Badge
@@ -142,8 +149,8 @@ export function AssemblyTab({
                       className="gap-1"
                       title={
                         event.signup_mode === "direct"
-                          ? "Quem já pegou vaga"
-                          : "Quem marcou disponibilidade"
+                          ? t("assembly.tookSlotTooltip")
+                          : t("assembly.availableTooltip")
                       }
                     >
                       <Users className="h-3 w-3" />
@@ -162,7 +169,7 @@ export function AssemblyTab({
                   {shortOnCandidates && empty > 0 ? (
                     <p className="mb-2 flex items-center gap-1.5 text-xs text-[color:var(--color-pending)]">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      Menos candidatos que vagas
+                      {t("assembly.shortOnCandidates")}
                     </p>
                   ) : null}
 
@@ -201,14 +208,14 @@ export function AssemblyTab({
                                   variant="secondary"
                                   className="bg-[color:var(--color-pending)]/15 text-[color:var(--color-pending)]"
                                 >
-                                  troca
+                                  {t("badges.swap")}
                                 </Badge>
                               ) : null}
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5 text-muted-foreground">
                               <Plus className="h-3.5 w-3.5" />
-                              vaga livre
+                              {t("assembly.openSlot")}
                             </span>
                           )}
                         </button>
@@ -218,7 +225,7 @@ export function AssemblyTab({
                             variant="ghost"
                             className="h-7 w-7"
                             disabled={pending}
-                            aria-label="Tirar da vaga"
+                            aria-label={t("assembly.clearSlot")}
                             onClick={() => clearSlot(event, s.position)}
                           >
                             <X className="h-3.5 w-3.5" />
@@ -241,9 +248,7 @@ export function AssemblyTab({
                       ) : (
                         <Wand2 className="h-3.5 w-3.5" />
                       )}
-                      {empty === 1
-                        ? "Sugerir para a vaga livre"
-                        : `Sugerir para as ${empty} vagas livres`}
+                      {t("assembly.suggestFill", { count: empty })}
                     </Button>
                   ) : null}
                 </div>
@@ -255,9 +260,7 @@ export function AssemblyTab({
 
       {days.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          {onlyIncomplete
-            ? "Tudo preenchido. 🎉"
-            : "Nenhuma celebração nesta escala."}
+          {onlyIncomplete ? t("assembly.allFilled") : t("assembly.emptyState")}
         </p>
       ) : null}
 
@@ -275,12 +278,13 @@ export function AssemblyTab({
 }
 
 /**
- * A casca do painel. O Sheet fica montado o tempo todo e só alterna `open`.
+ * The panel's shell. The Sheet stays mounted the whole time and only toggles
+ * `open`.
  *
- * Remontá-lo ao abrir (via key) fazia o painel fechar sozinho: o clique que o
- * abre ainda está em curso, e o `pointerup` chega depois da montagem — o Radix
- * o lê como clique fora e fecha. Por isso a key fica no corpo, que é quem
- * precisa nascer limpo a cada vaga.
+ * Remounting it on open (via key) made the panel close by itself: the click
+ * that opens it is still in flight, and the `pointerup` lands after the mount -
+ * Radix reads that as a click outside and closes. So the key sits on the body,
+ * which is what has to start clean for each slot.
  */
 function SlotPicker({
   slot,
@@ -337,6 +341,8 @@ function SlotPickerBody({
   busyByDay: ScheduleViewProps["busyByDay"];
 }) {
   const router = useRouter();
+  const t = useTranslations("schedules");
+  const resultError = useResultError();
   const [query, setQuery] = React.useState("");
   const [showAll, setShowAll] = React.useState(false);
   const [pending, startTransition] = React.useTransition();
@@ -344,7 +350,7 @@ function SlotPickerBody({
   const suggestions = React.useMemo<Suggestion[]>(() => {
     const { event } = slot;
 
-    // `locationCount` é por local; só aqui se sabe qual é o local da vaga.
+    // `locationCount` is per place; only here is the slot's place known.
     const statsById = new Map(
       Object.entries(stats).map(([personId, value]) => [
         personId,
@@ -398,8 +404,9 @@ function SlotPickerBody({
         personId,
         scheduleId: detail.schedule.id,
       });
-      if (!res.ok) {
-        toast.error(res.error);
+      const message = resultError(res);
+      if (message) {
+        toast.error(message);
         return;
       }
       onClose();
@@ -414,11 +421,12 @@ function SlotPickerBody({
     <div className="flex h-full flex-col">
       <SheetHeader className="px-4 pt-4 pb-2">
         <SheetTitle>
-          {slot.event.location.name} · vaga {slot.position}
+          {t("assembly.slotTitle", {
+            location: slot.event.location.name,
+            position: slot.position,
+          })}
         </SheetTitle>
-        <SheetDescription>
-          Ordenado por quem está em falta de escala. A escolha é sua.
-        </SheetDescription>
+        <SheetDescription>{t("assembly.pickerHint")}</SheetDescription>
       </SheetHeader>
 
       <div className="space-y-2 px-4 pb-3">
@@ -427,13 +435,13 @@ function SlotPickerBody({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar nome"
+            placeholder={t("assembly.searchPlaceholder")}
             className="pl-9"
           />
         </div>
         <label className="flex items-center gap-2 text-xs text-muted-foreground">
           <Switch checked={showAll} onCheckedChange={setShowAll} />
-          Mostrar quem não marcou disponibilidade
+          {t("assembly.showAll")}
         </label>
       </div>
 
@@ -462,22 +470,22 @@ function SlotPickerBody({
             {s.sameDayConflict ? (
               <AlertTriangle className="h-4 w-4 shrink-0 text-[color:var(--color-pending)]" />
             ) : null}
-            {!s.available ? <Badge variant="secondary">fora</Badge> : null}
+            {!s.available ? (
+              <Badge variant="secondary">{t("badges.unavailable")}</Badge>
+            ) : null}
           </button>
         ))}
 
         {filtered.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-muted-foreground">
-            {showAll
-              ? "Nenhum nome encontrado."
-              : "Ninguém marcou disponibilidade. Ative a opção acima para ver todos."}
+            {showAll ? t("assembly.noMatches") : t("assembly.noneAvailable")}
           </p>
         ) : noneSelectable ? (
-          // Lista cheia de nomes cinzas sem explicação é um beco: aqui o
-          // coordenador precisa saber que o caminho é furar a disponibilidade.
+          // A list full of greyed-out names with no explanation is a dead end:
+          // here the coordinator needs to know the way through is to override
+          // availability.
           <p className="px-4 py-6 text-center text-sm text-muted-foreground">
-            Todos os que marcaram disponibilidade já estão nesta celebração.
-            Ative a opção acima para escalar alguém do grupo mesmo assim.
+            {t("assembly.allAvailableAssigned")}
           </p>
         ) : null}
       </div>

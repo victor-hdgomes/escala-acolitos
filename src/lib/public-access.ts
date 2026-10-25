@@ -5,6 +5,7 @@ import { loadScheduleDetail } from "@/lib/schedule/queries";
 import type {
   Assignment,
   EventRow,
+  JoinLink,
   Location,
   Parish,
   Person,
@@ -14,11 +15,11 @@ import type {
 import type { ScheduleDetail } from "@/lib/schedule/types";
 
 /**
- * Tudo que entra pelo link público passa por aqui.
+ * Everything that comes in through a public link passes through here.
  *
- * Regra: o token é a única credencial, então ele é resolvido no servidor e
- * jamais confiamos num id vindo do cliente sem antes checar que pertence ao
- * objeto que o token abriu.
+ * The rule: the token is the only credential, so it is resolved on the server
+ * and an id coming from the client is never trusted until it has been checked
+ * against the object the token opened.
  */
 
 export interface FillContext {
@@ -26,7 +27,7 @@ export interface FillContext {
   parish: Parish;
   detail: ScheduleDetail;
   people: Person[];
-  /** Falso quando o prazo passou ou a escala saiu do período de coleta. */
+  /** False once the deadline has passed or the schedule left the collecting period. */
   open: boolean;
   closedReason: "deadline" | "status" | null;
 }
@@ -95,8 +96,8 @@ export async function resolveViewToken(
     .select("*")
     .eq("view_token", token)
     .maybeSingle();
-  // Só a escala publicada (ou arquivada) é visível por este link — rascunho
-  // em montagem não vaza.
+  // Only a published (or archived) schedule is visible through this link - a
+  // draft still being built never leaks.
   if (!schedule) return null;
   if (schedule.status !== "published" && schedule.status !== "archived") {
     return null;
@@ -120,9 +121,9 @@ export interface SwapContext {
   parish: Parish;
   requester: Person;
   filledBy: Person | null;
-  /** Quem marcou disponibilidade para esta celebração e não está escalado. */
+  /** Who marked availability for this celebration and is not scheduled. */
   candidates: Person[];
-  /** Todos os acólitos ativos — quem não marcou também pode se oferecer. */
+  /** Every active altar server - someone who did not mark can still offer. */
   people: Person[];
 }
 
@@ -201,8 +202,8 @@ export async function resolveSwapToken(
 }
 
 /**
- * Um nome vinculado a uma conta só pode ser movimentado pelo dono dela.
- * É o que impede que qualquer um com o link responda no lugar dos outros.
+ * A name linked to an account can only be moved by that account's owner.
+ * It is what stops anyone holding the link from answering for other people.
  */
 export function canActAsPerson(
   person: Pick<Person, "claimed_by">,
@@ -210,6 +211,57 @@ export function canActAsPerson(
 ): boolean {
   if (!person.claimed_by) return true;
   return person.claimed_by === userId;
+}
+
+export interface JoinLinkContext {
+  link: JoinLink;
+  parish: Parish;
+  /** Null while the link still works; otherwise why it does not. */
+  closedReason: JoinLinkClosedReason | null;
+}
+
+export type JoinLinkClosedReason = "inactive" | "expired" | "exhausted";
+
+/**
+ * Reads a join link without spending it. The screen needs to name the group
+ * before anyone signs up, and a visitor who is not in the group yet could not
+ * read the row under RLS, so this goes through the service role like every
+ * other token here.
+ */
+export async function resolveJoinLink(
+  token: string,
+): Promise<JoinLinkContext | null> {
+  const admin = createAdminClient();
+  const { data: link } = await admin
+    .from("join_links")
+    .select("*")
+    .eq("token", token)
+    .maybeSingle();
+  if (!link) return null;
+
+  const { data: parish } = await admin
+    .from("parishes")
+    .select("*")
+    .eq("id", link.parish_id)
+    .maybeSingle();
+  if (!parish) return null;
+
+  return {
+    link: link as JoinLink,
+    parish: parish as Parish,
+    closedReason: joinLinkClosedReason(link as JoinLink),
+  };
+}
+
+export function joinLinkClosedReason(
+  link: JoinLink,
+): JoinLinkClosedReason | null {
+  if (!link.active) return "inactive";
+  if (link.expires_at && Date.parse(link.expires_at) < Date.now()) {
+    return "expired";
+  }
+  if (link.max_uses !== null && link.uses >= link.max_uses) return "exhausted";
+  return null;
 }
 
 export function appUrl(path: string): string {

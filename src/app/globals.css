@@ -4,9 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================
-   Design Tokens — Escala de Acólitos
+   Design tokens - Altar Roster
    Base shadcn/ui (neutral), herdada do Monthly Budget.
-   Cores semânticas do domínio: filled / open / pending / novena.
+   Semantic colours of the domain: filled / open / pending / novena.
    ============================================================ */
 
 :root {
@@ -39,17 +39,17 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
 
-  /* Semântica do domínio */
-  --filled: oklch(0.65 0.18 152); /* verde — vaga preenchida / confirmado */
+  /* Semantics of the domain */
+  --filled: oklch(0.65 0.18 152); /* verde - vaga preenchida / confirmado */
   --filled-foreground: oklch(0.985 0 0);
-  --open: oklch(0.62 0.22 25); /* coral — vaga vazia / urgente */
+  --open: oklch(0.62 0.22 25); /* coral - vaga vazia / urgente */
   --open-foreground: oklch(0.985 0 0);
-  --pending: oklch(0.78 0.16 85); /* âmbar — substituição aberta / prazo */
+  --pending: oklch(0.78 0.16 85); /* amber - cover request open / deadline */
   --pending-foreground: oklch(0.205 0 0);
-  --novena: oklch(0.62 0.18 280); /* roxo — novena / celebração especial */
+  --novena: oklch(0.62 0.18 280); /* purple - novena / special celebration */
   --novena-foreground: oklch(0.985 0 0);
 
-  /* Charts (estatísticas) */
+  /* Charts (the statistics screen) */
   --chart-1: oklch(0.65 0.18 152);
   --chart-2: oklch(0.62 0.22 25);
   --chart-3: oklch(0.62 0.18 280);
@@ -184,12 +184,12 @@
 }
 
 @layer utilities {
-  /* Alvo de toque confortável no celular — a tela de disponibilidade é toda
-     feita de linhas clicáveis e o dedo erra fácil em alvos menores que isso. */
+  /* A comfortable tap target on a phone: the availability screen is nothing
+     but rows to tap, and a finger misses anything smaller than this. */
   .tap-target {
     min-height: 44px;
   }
-  /* Respeita a área segura do iPhone na bottom nav. */
+  /* Respects the iPhone's safe area under the bottom navigation. */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }

@@ -1,12 +1,12 @@
 /**
- * Apaga tudo que é escala e preserva a configuração do grupo.
+ * Deletes every schedule and keeps the group's setup.
  *
- *   node scripts/wipe-schedules.mjs            mostra o que seria apagado
- *   node scripts/wipe-schedules.mjs --confirm  apaga de verdade
+ *   node scripts/wipe-schedules.mjs            shows what would be deleted
+ *   node scripts/wipe-schedules.mjs --confirm  actually deletes it
  *
- * Sai: schedules, events, availabilities, assignments, swap_requests
- *      (os três últimos caem por cascade ao remover a escala).
- * Fica: parishes, locations, mass_templates, people, memberships, profiles.
+ * Goes: schedules, events, availabilities, assignments, swap_requests (the
+ *       last three by cascade when the schedule goes).
+ * Stays: parishes, locations, mass_templates, people, memberships, profiles.
  */
 
 import fs from "node:fs";
@@ -49,10 +49,10 @@ const assignments = eventIds.length
   : [];
 
 console.log("A apagar:");
-console.log(`  escalas          ${schedules.length}`);
-console.log(`  celebrações      ${events.length}`);
+console.log(`  schedules          ${schedules.length}`);
+console.log(`  celebrations     ${events.length}`);
 console.log(`  disponibilidades ${availabilities.length}`);
-console.log(`  escalações       ${assignments.length}`);
+console.log(`  assignments      ${assignments.length}`);
 
 const [parishes, locations, templates, people, memberships] = await Promise.all([
   rest("parishes?select=id"),
@@ -65,20 +65,20 @@ const [parishes, locations, templates, people, memberships] = await Promise.all(
 console.log("\nA preservar:");
 console.log(`  grupos           ${parishes.length}`);
 console.log(`  locais           ${locations.length}`);
-console.log(`  missas na grade  ${templates.length}`);
-console.log(`  acólitos         ${people.length}`);
+console.log(`  weekly Masses    ${templates.length}`);
+console.log(`  altar servers    ${people.length}`);
 console.log(`  membros          ${memberships.length} (${memberships.map((m) => m.role).join(", ")})`);
 
 if (!confirm) {
-  console.log("\nNada foi apagado. Rode de novo com --confirm.");
+  console.log("\nNothing was deleted. Run it again with --confirm.");
   process.exit(0);
 }
 
-// swap_requests e availabilities/assignments caem por cascade; email_log e
-// audit_log apontam para pessoas e grupo, então são limpos à parte.
+// swap_requests, availabilities and assignments go by cascade; email_log and
+// audit_log point at people and at the group, so they are cleared apart.
 await rest("schedules?id=not.is.null", { method: "DELETE" });
 await rest("email_log?id=not.is.null", { method: "DELETE" });
 await rest("audit_log?id=not.is.null", { method: "DELETE" });
 
-const restantes = await rest("schedules?select=id");
-console.log(`\n✓ Limpo. Escalas restantes: ${restantes.length}.`);
+const remaining = await rest("schedules?select=id");
+console.log(`\n✓ Done. Schedules left: ${remaining.length}.`);

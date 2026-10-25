@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { CalendarClock, Check, Church, Loader2, MapPin } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import { acceptSwapAction } from "@/app/t/[token]/actions";
@@ -19,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useResultError } from "@/hooks/use-error-message";
 import type { SwapStatus } from "@/lib/db/types";
 
 export function SwapView({
@@ -46,26 +48,40 @@ export function SwapView({
   candidates: PickablePerson[];
   others: PickablePerson[];
 }) {
+  const t = useTranslations("swap");
+  const resultError = useResultError();
   const router = useRouter();
   const [person, setPerson] = React.useState<PickablePerson | null>(
     () => [...candidates, ...others].find((p) => p.isMe) ?? null,
   );
   const [pickerOpen, setPickerOpen] = React.useState(false);
-  // Sem candidatos não há o que escolher: já abre com o grupo inteiro, senão
-  // o seletor aparece vazio justamente na tela mais urgente do app.
+  // With no candidates there is nothing to choose from: open on the whole
+  // group, or the picker shows up empty on the most urgent screen in the app.
   const [showAll, setShowAll] = React.useState(candidates.length === 0);
   const [pending, startTransition] = React.useTransition();
 
   const closed = status !== "open" || isPast;
 
+  // One screen, four states - each names itself.
+  const state =
+    status === "filled"
+      ? "filled"
+      : status === "cancelled"
+        ? "cancelled"
+        : isPast
+          ? "past"
+          : "open";
+
   const accept = (chosen: PickablePerson) =>
     startTransition(async () => {
-      const res = await acceptSwapAction({ token, personId: chosen.id });
-      if (!res.ok) {
-        toast.error(res.error);
+      const error = resultError(
+        await acceptSwapAction({ token, personId: chosen.id }),
+      );
+      if (error) {
+        toast.error(error);
         return;
       }
-      toast.success("Vaga assumida. Obrigado!");
+      toast.success(t("acceptedToast"));
       router.refresh();
     });
 
@@ -78,19 +94,14 @@ export function SwapView({
 
       <Card>
         <CardHeader>
-          <CardTitle>
-            {status === "filled"
-              ? "Vaga já assumida"
-              : status === "cancelled"
-                ? "Pedido cancelado"
-                : isPast
-                  ? "Celebração já passou"
-                  : "Alguém precisa de substituição"}
-          </CardTitle>
+          <CardTitle>{t(`heading.${state}`)}</CardTitle>
           <CardDescription>
             {status === "filled"
-              ? `${filledByName ?? "Outro acólito"} assumiu o lugar de ${requesterName}.`
-              : `${requesterName} não vai conseguir servir.`}
+              ? t("subheading.filled", {
+                  name: filledByName ?? t("unknownFiller"),
+                  requester: requesterName,
+                })
+              : t("subheading.open", { requester: requesterName })}
           </CardDescription>
         </CardHeader>
 
@@ -108,19 +119,13 @@ export function SwapView({
 
           {reason ? (
             <Alert>
-              <AlertDescription>Motivo: {reason}</AlertDescription>
+              <AlertDescription>{t("reasonLabel", { reason })}</AlertDescription>
             </Alert>
           ) : null}
 
           {closed ? (
             <Alert>
-              <AlertDescription>
-                {status === "filled"
-                  ? "Nada a fazer por aqui."
-                  : status === "cancelled"
-                    ? "Quem pediu acabou resolvendo."
-                    : "Essa data já passou."}
-              </AlertDescription>
+              <AlertDescription>{t(`closedNote.${state}`)}</AlertDescription>
             </Alert>
           ) : (
             <>
@@ -129,7 +134,7 @@ export function SwapView({
                 className="w-full justify-start"
                 onClick={() => setPickerOpen(true)}
               >
-                {person ? person.name : "Quem é você?"}
+                {person ? person.name : t("identifyAction")}
               </Button>
 
               <Button
@@ -142,11 +147,11 @@ export function SwapView({
                 ) : (
                   <Check className="h-4 w-4" />
                 )}
-                Posso assumir
+                {t("acceptAction")}
               </Button>
 
               <p className="text-center text-xs text-muted-foreground">
-                Primeiro que confirmar fica com a vaga.
+                {t("firstComeNote")}
               </p>
             </>
           )}
@@ -161,9 +166,7 @@ export function SwapView({
             setPerson(null);
           }}
         >
-          {showAll
-            ? "Mostrar só quem marcou disponibilidade"
-            : "Não acho meu nome na lista"}
+          {showAll ? t("showCandidatesAction") : t("showAllAction")}
         </button>
       ) : null}
 
@@ -173,13 +176,13 @@ export function SwapView({
         onChange={setPerson}
         open={pickerOpen}
         onOpenChange={setPickerOpen}
-        title="Quem vai assumir?"
+        title={t("picker.title")}
         description={
           showAll
-            ? "Qualquer pessoa do grupo pode assumir esta vaga."
-            : "Quem marcou disponibilidade para este horário."
+            ? t("picker.descriptionAll")
+            : t("picker.descriptionCandidates")
         }
-        emptyMessage="Nenhum nome encontrado."
+        emptyMessage={t("picker.emptyState")}
       />
     </div>
   );

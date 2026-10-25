@@ -4,13 +4,13 @@ import type { EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 
 /**
- * Volta dos links de autenticação do Supabase.
+ * Landing point for Supabase authentication links.
  *
- * Dois formatos chegam aqui, e o app precisa dos dois:
- *   • `?code=…`        fluxo PKCE, usado no login pelo próprio app
- *   • `?token_hash=…&type=…`  links de e-mail (confirmação de cadastro,
- *     redefinição de senha, magic link). Sem tratar este, o link que o
- *     Supabase manda por e-mail cai em "link inválido".
+ * Two shapes arrive here, and the app needs both:
+ *   • `?code=…`               PKCE flow, used when signing in from the app
+ *   • `?token_hash=…&type=…`  email links (signup confirmation, password
+ *     reset, magic link). Without handling this one, the link Supabase mails
+ *     out lands on "invalid link".
  */
 const EMAIL_OTP_TYPES: EmailOtpType[] = [
   "signup",
@@ -22,10 +22,10 @@ const EMAIL_OTP_TYPES: EmailOtpType[] = [
 ];
 
 function safeNext(value: string | null): string {
-  // Só caminho interno: um `next` manipulado não pode levar para fora do app.
+  // Internal paths only: a tampered `next` must not lead out of the app.
   return value && value.startsWith("/") && !value.startsWith("//")
     ? value
-    : "/inicio";
+    : "/home";
 }
 
 export async function GET(request: NextRequest) {
@@ -47,12 +47,12 @@ export async function GET(request: NextRequest) {
       token_hash: tokenHash,
     });
     if (!error) {
-      // Redefinição de senha cai direto na tela de trocar a senha.
+      // A password reset goes straight to the screen that changes it.
       return NextResponse.redirect(
         `${origin}${type === "recovery" ? "/reset-password" : next}`,
       );
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?erro=link`);
+  return NextResponse.redirect(`${origin}/login?error=link`);
 }

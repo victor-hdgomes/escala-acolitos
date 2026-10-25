@@ -1,26 +1,51 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
+import { FillGate } from "@/components/organisms/fill/fill-gate";
 import { FillView } from "@/components/organisms/fill/fill-view";
 import type { FillDay, FillEvent } from "@/components/organisms/fill/fill-view";
-import {
-  dayKey,
-  formatDayMonth,
-  formatFullDate,
-  formatTime,
-  periodOf,
-  weekdayLong,
-  zonedParts,
-} from "@/lib/date";
-import { resolveFillToken } from "@/lib/public-access";
+import { dayKey, periodOf, zonedParts } from "@/lib/date";
 import { nowDate, nowMs } from "@/lib/now";
+import { resolveFillToken } from "@/lib/public-access";
+import { getDateFormatter } from "@/lib/server-date";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata: Metadata = {
-  title: "Preencher escala",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("fill");
+  return {
+    title: t("metaTitle"),
+    robots: { index: false, follow: false },
+  };
+}
+
+/**
+ * Whether this account may answer a members-only schedule, and, when it may
+ * not, the code it should hand to whoever coordinates the group.
+ */
+async function membersOnlyGate(
+  parishId: string,
+  userId: string | null,
+): Promise<{ blocked: boolean; joinCode: string | null }> {
+  if (!userId) return { blocked: true, joinCode: null };
+
+  const admin = createAdminClient();
+  const { data: membership } = await admin
+    .from("memberships")
+    .select("id")
+    .eq("parish_id", parishId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (membership) return { blocked: false, joinCode: null };
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("join_code")
+    .eq("id", userId)
+    .maybeSingle();
+  return { blocked: true, joinCode: profile?.join_code ?? null };
+}
 
 export default async function FillPage({
   params,
@@ -31,7 +56,29 @@ export default async function FillPage({
   const ctx = await resolveFillToken(token);
   if (!ctx) notFound();
 
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // A group may decide that only its own accounts answer. The check runs
+  // before anything is loaded: whoever cannot answer should not be handed the
+  // list of names either.
+  if (ctx.parish.fill_access === "members") {
+    const gate = await membersOnlyGate(ctx.parish.id, user?.id ?? null);
+    if (gate.blocked) {
+      return (
+        <FillGate
+          parishName={ctx.parish.name}
+          token={token}
+          joinCode={gate.joinCode}
+        />
+      );
+    }
+  }
+
   const { timezone } = ctx.detail;
+  const df = await getDateFormatter(timezone);
   const now = nowMs();
 
   const events: FillEvent[] = [];
@@ -44,7 +91,7 @@ export default async function FillPage({
       events.push({
         id: ev.id,
         dayKey: day.key,
-        timeLabel: formatTime(ev.starts_at, timezone),
+        timeLabel: df.time(ev.starts_at),
         weekday: zonedParts(ev.starts_at, timezone).weekday,
         period: periodOf(ev.starts_at, timezone),
         locationId: ev.location.id,
@@ -66,14 +113,14 @@ export default async function FillPage({
     const first = day.events[0];
     days.push({
       key: day.key,
-      title: formatDayMonth(first.starts_at, timezone),
-      weekdayLabel: weekdayLong(first.starts_at, timezone),
+      title: df.dayMonth(first.starts_at),
+      weekdayLabel: df.weekday(first.starts_at),
       eventIds: ids,
     });
   }
 
-  // Disponibilidades já marcadas, por pessoa: o formulário reabre no estado
-  // em que ficou, inclusive em outro aparelho.
+  // Availability already marked, by person: the form reopens in the state it
+  // was left in, even on another device.
   const admin = createAdminClient();
   const eventIds = events.map((e) => e.id);
   const { data: availabilities } = eventIds.length
@@ -88,10 +135,6 @@ export default async function FillPage({
     (byPerson[row.person_id] ??= []).push(row.event_id);
   }
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
   const myPersonId = user
     ? (ctx.people.find((p) => p.claimed_by === user.id)?.id ?? null)
     : null;
@@ -113,7 +156,7 @@ export default async function FillPage({
       introNote={ctx.schedule.intro_note}
       deadlineLabel={
         ctx.schedule.availability_deadline
-          ? formatFullDate(ctx.schedule.availability_deadline, timezone)
+          ? df.fullDate(ctx.schedule.availability_deadline)
           : null
       }
       open={ctx.open}

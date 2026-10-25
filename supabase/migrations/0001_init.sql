@@ -1,21 +1,24 @@
--- Escala de Acólitos — schema inicial
+-- Altar Roster - initial schema
 --
--- Dois mundos convivem aqui:
---   1. Área logada (coordenação/admin) — isolada por RLS via auth.uid().
---   2. Link público (formulário, escala publicada, substituição) — RLS NÃO
---      cobre acesso anônimo por token, então todo acesso público passa por
---      Server Action com a service role, que valida o token antes de escrever.
---      Nenhuma policy abaixo libera `anon`; isso é intencional.
+-- Two worlds live here:
+--   1. The signed-in area (coordination and administration), isolated by RLS
+--      through auth.uid().
+--   2. The public links (availability form, published schedule, cover
+--      request). RLS does NOT cover anonymous access by token, so every
+--      public path goes through a Server Action with the service role, which
+--      checks the token before writing anything. No policy below opens
+--      anything to `anon`, and that is deliberate.
 --
--- Multi-grupo: `parishes` é a raiz de tenancy. Uma conta pode participar de
--- vários grupos (paróquias, ministérios, outra cidade) com papel diferente em
--- cada um — por isso `memberships` é N:N e o app guarda qual grupo está ativo.
+-- Multi-group: `parishes` is the root of tenancy. One account can belong to
+-- several groups (parishes, ministries, another town) with a different role
+-- in each, which is why `memberships` is many-to-many and the app remembers
+-- which group is active.
 
 create extension if not exists "pgcrypto";
 
--- Token curto e URL-safe para os links públicos. 8 bytes = 64 bits: o
--- suficiente para não ser adivinhado, curto o bastante para caber numa
--- mensagem de WhatsApp sem quebrar linha.
+-- A short, URL-safe token for the public links. 8 bytes is 64 bits: enough
+-- not to be guessed, short enough to fit in a WhatsApp message without
+-- wrapping onto a second line.
 create or replace function public.gen_url_token()
 returns text language sql volatile as $$
   select encode(gen_random_bytes(8), 'hex');
@@ -46,15 +49,15 @@ create trigger parishes_touch before update on public.parishes
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- profiles (1:1 com auth.users)
+-- profiles (one per auth.users row)
 -- ============================================================
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   display_name text,
   email text,
   theme text not null default 'dark',
-  -- Dono da instalação. Enxerga e administra todos os grupos. Marcado à mão
-  -- no banco — não existe tela que conceda isto, de propósito.
+  -- Owner of the installation. Sees and administers every group. Set by hand
+  -- in the database: no screen grants this, on purpose.
   is_superadmin boolean not null default false,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -84,7 +87,7 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 -- ============================================================
--- memberships — papel do usuário na paróquia
+-- memberships - what an account is allowed to do in a group
 -- ============================================================
 create table if not exists public.memberships (
   id uuid primary key default gen_random_uuid(),
@@ -105,8 +108,8 @@ returns boolean language sql stable security definer set search_path = public as
   );
 $$;
 
--- Security definer: as policies das outras tabelas consultam memberships, e
--- sem isso a policy de memberships consultaria a si mesma (recursão infinita).
+-- Security definer: the other tables' policies read memberships, and without
+-- this the memberships policy would read itself, recursing forever.
 create or replace function public.current_role_in(p_parish uuid)
 returns text language sql stable security definer set search_path = public as $$
   select case
@@ -122,7 +125,7 @@ returns boolean language sql stable security definer set search_path = public as
   select public.current_role_in(p_parish) is not null;
 $$;
 
--- Coordenador e admin escrevem; admin manda em tudo.
+-- Coordinators and admins write; an admin decides everything.
 create or replace function public.can_manage(p_parish uuid)
 returns boolean language sql stable security definer set search_path = public as $$
   select public.current_role_in(p_parish) in ('admin', 'coordinator');
@@ -134,7 +137,7 @@ returns boolean language sql stable security definer set search_path = public as
 $$;
 
 -- ============================================================
--- locations — locais de celebração
+-- locations - where a celebration happens
 -- ============================================================
 create table if not exists public.locations (
   id uuid primary key default gen_random_uuid(),
@@ -151,19 +154,19 @@ create table if not exists public.locations (
 create index if not exists locations_parish_idx on public.locations(parish_id);
 
 -- ============================================================
--- people — a lista de acólitos. Existe sem conta.
+-- people - the altar servers list. A name exists without an account.
 -- ============================================================
 create table if not exists public.people (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   full_name text not null,
-  -- Como o nome aparece na escala ("MARIA EDUARDA LUCENA"). Quando null, usa full_name.
+  -- How the name reads on the schedule. Null falls back to full_name.
   short_name text,
   email text,
   phone text,
   active boolean not null default true,
-  -- Quando preenchido, só este usuário pode marcar disponibilidade ou assumir
-  -- vaga com este nome. É o que impede um colega de responder no seu lugar.
+  -- Once set, only this account marks availability or takes a slot under
+  -- this name. It is what stops someone answering in your place.
   claimed_by uuid references auth.users(id) on delete set null,
   claimed_at timestamptz,
   notes text,
@@ -172,7 +175,7 @@ create table if not exists public.people (
   unique (parish_id, full_name)
 );
 
--- Um usuário é uma pessoa só.
+-- One account, one name per group.
 create unique index if not exists people_claimed_by_uniq
   on public.people(claimed_by) where claimed_by is not null;
 create index if not exists people_parish_idx on public.people(parish_id);
@@ -182,15 +185,15 @@ create trigger people_touch before update on public.people
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- invites — entrada de novos membros/coordenadores num grupo
+-- invites - one named seat in a group, burnt on acceptance
 -- ============================================================
 create table if not exists public.invites (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   email text,
   role text not null check (role in ('admin', 'coordinator', 'member')),
-  -- Quando preenchido, aceitar o convite já vincula a conta a este acólito —
-  -- resolve cadastro e vínculo de nome num clique só.
+  -- Once set, accepting the invitation also links the account to this altar
+  -- server, settling the sign-up and the name link in one click.
   person_id uuid references public.people(id) on delete set null,
   token text not null unique default public.gen_url_token(),
   expires_at timestamptz not null default (now() + interval '14 days'),
@@ -203,13 +206,13 @@ create table if not exists public.invites (
 create index if not exists invites_parish_idx on public.invites(parish_id);
 
 -- ============================================================
--- mass_templates — a grade semanal fixa
+-- mass_templates - the week as it repeats
 -- ============================================================
 create table if not exists public.mass_templates (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   location_id uuid not null references public.locations(id) on delete cascade,
-  weekday int not null check (weekday between 0 and 6), -- 0 = domingo
+  weekday int not null check (weekday between 0 and 6), -- 0 = Sunday
   start_time time not null,
   slots int not null default 4 check (slots between 1 and 12),
   label text,
@@ -221,13 +224,13 @@ create table if not exists public.mass_templates (
 create index if not exists mass_templates_parish_idx on public.mass_templates(parish_id);
 
 -- ============================================================
--- schedules — a escala de um mês
+-- schedules - one month, or one devotion of its own
 -- ============================================================
 create table if not exists public.schedules (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid not null references public.parishes(id) on delete cascade,
   title text not null,
-  month date not null, -- sempre o dia 1 do mês de referência
+  month date not null, -- always the first day of the month it refers to
   status text not null default 'draft'
     check (status in ('draft', 'collecting', 'building', 'published', 'archived')),
   availability_deadline timestamptz,
@@ -247,17 +250,19 @@ create trigger schedules_touch before update on public.schedules
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- events — cada celebração dentro da escala
+-- events - each celebration inside a schedule
 -- ============================================================
 create table if not exists public.events (
   id uuid primary key default gen_random_uuid(),
   schedule_id uuid not null references public.schedules(id) on delete cascade,
   location_id uuid not null references public.locations(id) on delete restrict,
   starts_at timestamptz not null,
-  label text, -- "3º dia da Novena em honra a Jesus Cristo Rei do Universo"
+  label text, -- "Day 3 - Novena in honour of Our Lady of Sorrows"
   kind text not null default 'mass' check (kind in ('mass', 'novena', 'special')),
-  -- 'availability' = acólito marca que pode, coordenador escala.
-  -- 'direct'       = acólito pega a vaga direto (modelo da novena no WhatsApp).
+  -- 'availability' = the altar server marks what they can do and the
+  --                   coordinator assigns.
+  -- 'direct'       = the altar server takes the slot themselves, the way a
+  --                   novena is claimed in the group chat.
   signup_mode text not null default 'availability'
     check (signup_mode in ('availability', 'direct')),
   slots int not null default 4 check (slots between 1 and 12),
@@ -269,7 +274,7 @@ create unique index if not exists events_slot_uniq
   on public.events(schedule_id, location_id, starts_at);
 
 -- ============================================================
--- availabilities — "posso servir nesta celebração"
+-- availabilities - "I can serve at this one"
 -- ============================================================
 create table if not exists public.availabilities (
   id uuid primary key default gen_random_uuid(),
@@ -284,7 +289,7 @@ create index if not exists availabilities_person_idx on public.availabilities(pe
 create index if not exists availabilities_event_idx on public.availabilities(event_id);
 
 -- ============================================================
--- assignments — a escala final
+-- assignments - the finished schedule
 -- ============================================================
 create table if not exists public.assignments (
   id uuid primary key default gen_random_uuid(),
@@ -308,7 +313,7 @@ create trigger assignments_touch before update on public.assignments
   for each row execute function public.touch_updated_at();
 
 -- ============================================================
--- swap_requests — pedido de substituição
+-- swap_requests - asking for someone to cover
 -- ============================================================
 create table if not exists public.swap_requests (
   id uuid primary key default gen_random_uuid(),
@@ -322,12 +327,12 @@ create table if not exists public.swap_requests (
   created_at timestamptz not null default now()
 );
 
--- Um pedido aberto por vaga: evita dois links circulando para a mesma missa.
+-- One open request per slot, so two links never circulate for one Mass.
 create unique index if not exists swap_one_open_per_assignment
   on public.swap_requests(assignment_id) where status = 'open';
 
 -- ============================================================
--- email_log — idempotência de envio (o cron pode rodar duas vezes)
+-- email_log - sending exactly once (the cron may run twice)
 -- ============================================================
 create table if not exists public.email_log (
   id uuid primary key default gen_random_uuid(),
@@ -341,13 +346,13 @@ create table if not exists public.email_log (
 );
 
 -- ============================================================
--- audit_log — quem mexeu em quê. Crítico: há link público sem login.
+-- audit_log - who changed what. It matters: public links carry no sign-in.
 -- ============================================================
 create table if not exists public.audit_log (
   id uuid primary key default gen_random_uuid(),
   parish_id uuid references public.parishes(id) on delete cascade,
   actor_user_id uuid references auth.users(id) on delete set null,
-  actor_label text, -- nome da pessoa quando a ação veio do link público
+  actor_label text, -- the person's name when the action came from a link
   action text not null,
   entity text,
   entity_id uuid,
@@ -376,34 +381,35 @@ alter table public.swap_requests  enable row level security;
 alter table public.email_log      enable row level security;
 alter table public.audit_log      enable row level security;
 
--- profiles: cada um o seu. `is_superadmin` nunca é editável pelo app — a
--- policy de update permite a linha, e a server action nunca manda esse campo.
+-- profiles: each account reads and writes its own row. `is_superadmin` is
+-- never editable from the app; migration 0005 is what enforces that.
 create policy profiles_select_own on public.profiles for select using (auth.uid() = id);
 create policy profiles_insert_own on public.profiles for insert with check (auth.uid() = id);
 create policy profiles_update_own on public.profiles for update using (auth.uid() = id);
 
--- parishes: membro lê; admin do grupo edita; qualquer conta cria um grupo novo
--- (e a server action a torna admin dele em seguida).
+-- parishes: a member reads; the group's admin edits; any account opens a new
+-- group (and the server action makes it the admin straight after).
 create policy parishes_select on public.parishes for select using (public.is_member(id));
 create policy parishes_insert on public.parishes for insert
   with check (auth.uid() is not null);
 create policy parishes_update on public.parishes for update using (public.is_admin(id));
 create policy parishes_delete on public.parishes for delete using (public.is_admin(id));
 
--- memberships: membro lê as do seu grupo, admin do grupo escreve.
+-- memberships: a member reads their own group's, the group's admin writes.
 create policy memberships_select on public.memberships for select using (public.is_member(parish_id));
 create policy memberships_insert on public.memberships for insert with check (public.is_admin(parish_id));
 create policy memberships_update on public.memberships for update using (public.is_admin(parish_id));
 create policy memberships_delete on public.memberships for delete using (public.is_admin(parish_id));
 
--- invites: só admin do grupo. Quem aceita chega sem membership ainda, então a
--- leitura por token roda na server action com service role.
+-- invites: the group's admin only. Whoever accepts arrives with no
+-- membership yet, so reading by token runs in the server action with the
+-- service role.
 create policy invites_select on public.invites for select using (public.is_admin(parish_id));
 create policy invites_write on public.invites for all
   using (public.is_admin(parish_id))
   with check (public.is_admin(parish_id));
 
--- Tabelas com parish_id direto: membro lê, quem gerencia escreve.
+-- Tables carrying parish_id directly: a member reads, a manager writes.
 do $$
 declare t text;
 begin
@@ -419,13 +425,14 @@ begin
   end loop;
 end $$;
 
--- Exceção: o próprio acólito logado vincula/desvincula o seu nome, sem ser
--- coordenador. A checagem de quem ele está vinculando fica na server action.
+-- One exception: a signed-in altar server links and unlinks their own name
+-- without being a coordinator. Which name they are claiming is checked in the
+-- server action.
 create policy people_claim_self on public.people for update
   using (public.is_member(parish_id) and (claimed_by is null or claimed_by = auth.uid()))
   with check (public.is_member(parish_id) and (claimed_by is null or claimed_by = auth.uid()));
 
--- events / availabilities / assignments: parish_id vem por join.
+-- events, availabilities and assignments reach parish_id through a join.
 create or replace function public.event_parish(p_event uuid)
 returns uuid language sql stable security definer set search_path = public as $$
   select s.parish_id from public.events e
@@ -466,6 +473,6 @@ create policy swap_write on public.swap_requests for all
                        where a.id = assignment_id
                          and public.can_manage(public.event_parish(a.event_id))));
 
--- Logs: só quem gerencia lê; escrita é sempre service role.
+-- Logs: only a manager reads; writing is always the service role.
 create policy email_log_select on public.email_log for select using (public.can_manage(parish_id));
 create policy audit_log_select on public.audit_log for select using (public.can_manage(parish_id));

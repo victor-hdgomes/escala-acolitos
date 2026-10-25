@@ -1,10 +1,10 @@
 "use client";
 
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import { CalendarHeart, CalendarRange, Plus } from "lucide-react";
-import { toast } from "sonner";
 
-import { createScheduleAction } from "@/app/(app)/escalas/actions";
+import { createScheduleAction } from "@/app/(app)/schedules/actions";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import { useFormAction } from "@/hooks/use-form-action";
@@ -35,14 +35,14 @@ export function NewScheduleDialog({
   timezone: string;
   locations: LocationLite[];
 }) {
+  const t = useTranslations("schedules");
   const [open, setOpen] = React.useState(false);
   const [kind, setKind] = React.useState<Kind>("monthly");
   const [generate, setGenerate] = React.useState(hasTemplates);
 
-  const { onSubmit, pending } = useFormAction(createScheduleAction, {
-    // Sucesso redireciona pela própria action; só o erro volta até aqui.
-    onError: (message) => toast.error(message),
-  });
+  // Success redirects from inside the action itself; only the error comes back
+  // here, and the hook already toasts it.
+  const { onSubmit, pending } = useFormAction(createScheduleAction);
 
   const nextMonth = addMonths(currentMonthIso(timezone), 1).slice(0, 7);
   const firstOfNextMonth = `${nextMonth}-01`;
@@ -58,31 +58,31 @@ export function NewScheduleDialog({
       <DialogTrigger asChild>
         <Button size="sm">
           <Plus className="h-4 w-4" />
-          Nova escala
+          {t("list.newSchedule")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Nova escala</DialogTitle>
+          <DialogTitle>{t("list.newSchedule")}</DialogTitle>
           <DialogDescription>
             {kind === "monthly"
-              ? "O mês já nasce com as missas da grade semanal. Você ajusta depois."
-              : "Uma novena tem link e prazo próprios — não precisa entrar na escala do mês."}
+              ? t("list.newMonthlyDescription")
+              : t("list.newNovenaDescription")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-2">
           <KindOption
             icon={CalendarRange}
-            label="Mensal"
-            hint="As missas do mês"
+            label={t("list.kindMonthlyLabel")}
+            hint={t("list.kindMonthlyHint")}
             active={kind === "monthly"}
             onClick={() => setKind("monthly")}
           />
           <KindOption
             icon={CalendarHeart}
-            label="Novena"
-            hint="Dias seguidos"
+            label={t("list.kindNovenaLabel")}
+            hint={t("list.kindNovenaHint")}
             active={kind === "novena"}
             onClick={() => setKind("novena")}
           />
@@ -106,7 +106,7 @@ export function NewScheduleDialog({
           )}
 
           <SubmitButton pending={pending} className="w-full">
-            {kind === "monthly" ? "Criar escala" : "Criar novena"}
+            {kind === "monthly" ? t("list.createSchedule") : t("novena.create")}
           </SubmitButton>
         </form>
       </DialogContent>
@@ -157,10 +157,12 @@ function MonthlyFields({
   generate: boolean;
   onGenerateChange: (value: boolean) => void;
 }) {
+  const t = useTranslations("schedules");
+
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="sch-month">Mês</Label>
+        <Label htmlFor="sch-month">{t("fields.month")}</Label>
         <Input
           id="sch-month"
           name="month"
@@ -170,19 +172,17 @@ function MonthlyFields({
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor="sch-deadline">Prazo de preenchimento</Label>
+        <Label htmlFor="sch-deadline">{t("list.deadlineLabel")}</Label>
         <Input id="sch-deadline" name="deadline" type="date" />
-        <p className="text-xs text-muted-foreground">
-          Depois dessa data o link para de aceitar respostas.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("list.deadlineHint")}</p>
       </div>
       <label className="flex items-center justify-between gap-3 rounded-md border border-border p-3">
         <span className="min-w-0 text-sm">
-          Gerar celebrações da grade
+          {t("list.generateLabel")}
           <span className="block text-xs text-muted-foreground">
             {hasTemplates
-              ? "Cria todas as missas fixas do mês"
-              : "Nenhuma missa fixa cadastrada ainda"}
+              ? t("list.generateHint")
+              : t("list.generateEmptyHint")}
           </span>
         </span>
         <Switch
@@ -203,20 +203,22 @@ function NovenaFields({
   locations: LocationLite[];
   defaultFirstDay: string;
 }) {
+  const t = useTranslations("schedules");
+
   return (
     <>
       <div className="space-y-2">
-        <Label htmlFor="nov-title">Nome</Label>
+        <Label htmlFor="nov-title">{t("fields.name")}</Label>
         <Input
           id="nov-title"
           name="title"
-          placeholder="Novena em honra a Nossa Senhora Aparecida"
+          placeholder={t("novena.namePlaceholder")}
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="nov-location">Local</Label>
+        <Label htmlFor="nov-location">{t("fields.location")}</Label>
         <FormSelect
           id="nov-location"
           name="locationId"
@@ -227,7 +229,7 @@ function NovenaFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="nov-first">Primeiro dia</Label>
+          <Label htmlFor="nov-first">{t("fields.firstDay")}</Label>
           <Input
             id="nov-first"
             name="firstDay"
@@ -237,7 +239,7 @@ function NovenaFields({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="nov-time">Hora</Label>
+          <Label htmlFor="nov-time">{t("fields.time")}</Label>
           <Input
             id="nov-time"
             name="time"
@@ -250,7 +252,7 @@ function NovenaFields({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="nov-days">Dias</Label>
+          <Label htmlFor="nov-days">{t("fields.days")}</Label>
           <Input
             id="nov-days"
             name="days"
@@ -262,7 +264,7 @@ function NovenaFields({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="nov-slots">Vagas por dia</Label>
+          <Label htmlFor="nov-slots">{t("fields.slotsPerDay")}</Label>
           <Input
             id="nov-slots"
             name="slots"
@@ -276,20 +278,20 @@ function NovenaFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="nov-mode">Quem preenche</Label>
+        <Label htmlFor="nov-mode">{t("novena.whoFills")}</Label>
         <FormSelect
           id="nov-mode"
           name="signupMode"
           defaultValue="direct"
           options={[
-            { value: "direct", label: "O acólito pega a vaga" },
-            { value: "availability", label: "O coordenador escala" },
+            { value: "direct", label: t("novena.modeDirect") },
+            { value: "availability", label: t("novena.modeCoordinator") },
           ]}
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="nov-deadline">Prazo (opcional)</Label>
+        <Label htmlFor="nov-deadline">{t("novena.deadlineOptional")}</Label>
         <Input id="nov-deadline" name="deadline" type="date" />
       </div>
     </>

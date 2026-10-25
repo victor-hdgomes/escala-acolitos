@@ -1,14 +1,14 @@
 "use client";
 
-import * as React from "react";
-import { useActionState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Copy, Download, FileText, Link2, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 
-import { updateScheduleAction } from "@/app/(app)/escalas/actions";
+import { updateScheduleAction } from "@/app/(app)/schedules/actions";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
+import { useDateFormatter } from "@/components/providers/timezone-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -19,9 +19,10 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { ActionResult } from "@/lib/action-result";
+import { useFormAction } from "@/hooks/use-form-action";
 import { copyToClipboard, shareOrCopy, whatsAppUrl } from "@/lib/client-utils";
-import { formatFullDate } from "@/lib/date";
+import { dayKey } from "@/lib/date";
+import { novenaTitleOf } from "@/lib/schedule/generate";
 import {
   buildInviteMessage,
   buildNovenaText,
@@ -31,43 +32,60 @@ import {
 } from "@/lib/schedule/format";
 
 export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
+  const t = useTranslations("schedules");
+  // Everything pasted into the group chat is written from its own namespace.
+  const tw = useTranslations("whatsapp");
+  const df = useDateFormatter();
+
   const events = detail.days.flatMap((d) => d.events);
   const novenaEvents = events.filter((e) => e.kind === "novena");
   const published = detail.schedule.status === "published";
 
   const deadlineLabel = detail.schedule.availability_deadline
-    ? formatFullDate(detail.schedule.availability_deadline, detail.timezone)
+    ? df.fullDate(detail.schedule.availability_deadline)
     : null;
 
   const inviteMessage = buildInviteMessage({
+    t: tw,
+    df,
     schedule: detail.schedule,
     url: fillUrl,
     deadlineLabel,
     hasNovena: novenaEvents.length > 0,
   });
   const publishedMessage = buildPublishedMessage({
+    t: tw,
+    df,
     schedule: detail.schedule,
     url: viewUrl,
   });
-  const scheduleText = buildScheduleText(detail);
+  const scheduleText = buildScheduleText({ t: tw, df, detail });
+  // The novena's name is recovered from the first day's stored label, which
+  // the generator wrote as "<day> - <name>". Only that module knows the
+  // label's grammar, so the split lives there.
   const novenaText = novenaEvents.length
     ? buildNovenaText({
-        title: novenaEvents[0].label?.replace(/^\d+º dia da /, "") ?? "Novena",
+        t: tw,
+        df,
+        title:
+          (novenaEvents[0].label ? novenaTitleOf(novenaEvents[0].label) : null) ??
+          t("novena.fallbackTitle"),
         events: novenaEvents,
-        timezone: detail.timezone,
       })
     : null;
 
   function downloadCsv() {
-    const csv = buildScheduleCsv(detail);
-    // BOM para o Excel abrir os acentos certo.
+    const csv = buildScheduleCsv({ t: tw, df, detail });
+    // BOM so Excel opens the accented characters correctly.
     const blob = new Blob([`﻿${csv}`], {
       type: "text/csv;charset=utf-8",
     });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `escala-${detail.schedule.month.slice(0, 7)}.csv`;
+    a.download = t("share.csvFileName", {
+      month: detail.schedule.month.slice(0, 7),
+    });
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -75,13 +93,13 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
   return (
     <div className="space-y-4">
       <LinkCard
-        title="Link de preenchimento"
+        title={t("share.fillLinkTitle")}
         description={
-          // Numa novena de preenchimento direto ninguém marca disponibilidade:
-          // o acólito pega a vaga ele mesmo.
+          // In a direct-signup novena nobody marks availability: the altar
+          // server takes the slot themselves.
           events.every((e) => e.signup_mode === "direct")
-            ? "É o que vai no grupo para o pessoal pegar as vagas."
-            : "É o que vai no grupo para o pessoal marcar disponibilidade."
+            ? t("share.fillLinkDescriptionDirect")
+            : t("share.fillLinkDescription")
         }
         url={fillUrl}
         message={inviteMessage}
@@ -89,8 +107,8 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
 
       {published ? (
         <LinkCard
-          title="Link da escala publicada"
-          description="Somente leitura. Quem abrir vê onde cada um serve."
+          title={t("share.viewLinkTitle")}
+          description={t("share.viewLinkDescription")}
           url={viewUrl}
           message={publishedMessage}
         />
@@ -102,47 +120,51 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <FileText className="h-4 w-4" />
-            Exportar
+            {t("share.exportTitle")}
           </CardTitle>
-          <CardDescription>
-            Para colar no grupo ou abrir na planilha de sempre.
-          </CardDescription>
+          <CardDescription>{t("share.exportDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={async () => {
-              const r = await shareOrCopy("Escala", scheduleText);
-              if (r === "copied") toast.success("Escala copiada");
+              const r = await shareOrCopy(
+                t("share.scheduleShareTitle"),
+                scheduleText,
+              );
+              if (r === "copied") toast.success(t("share.scheduleCopied"));
             }}
           >
             <Copy className="h-4 w-4" />
-            Escala em texto
+            {t("share.scheduleAsText")}
           </Button>
           {novenaText ? (
             <Button
               variant="outline"
               size="sm"
               onClick={async () => {
-                const r = await shareOrCopy("Novena", novenaText);
-                if (r === "copied") toast.success("Novena copiada");
+                const r = await shareOrCopy(
+                  t("share.novenaShareTitle"),
+                  novenaText,
+                );
+                if (r === "copied") toast.success(t("share.novenaCopied"));
               }}
             >
               <Copy className="h-4 w-4" />
-              Novena em texto
+              {t("share.novenaAsText")}
             </Button>
           ) : null}
           <Button variant="outline" size="sm" onClick={downloadCsv}>
             <Download className="h-4 w-4" />
-            CSV
+            {t("share.csv")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Prévia da escala</CardTitle>
+          <CardTitle className="text-base">{t("share.previewTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           <pre className="max-h-80 overflow-auto rounded-md bg-muted/40 p-3 text-xs whitespace-pre-wrap">
@@ -165,6 +187,8 @@ function LinkCard({
   url: string;
   message: string;
 }) {
+  const t = useTranslations("schedules");
+
   return (
     <Card>
       <CardHeader>
@@ -180,10 +204,10 @@ function LinkCard({
           <Button
             size="icon"
             variant="ghost"
-            aria-label="Copiar link"
+            aria-label={t("share.copyLink")}
             onClick={() => {
               void copyToClipboard(url);
-              toast.success("Link copiado");
+              toast.success(t("linkCopied"));
             }}
           >
             <Copy className="h-4 w-4" />
@@ -198,7 +222,7 @@ function LinkCard({
               rel="noopener noreferrer"
             >
               <MessageCircle className="h-4 w-4" />
-              Mandar no WhatsApp
+              {t("share.sendOnWhatsApp")}
             </a>
           </Button>
           <Button
@@ -206,11 +230,11 @@ function LinkCard({
             variant="outline"
             onClick={async () => {
               const r = await shareOrCopy(title, message);
-              if (r === "copied") toast.success("Mensagem copiada");
+              if (r === "copied") toast.success(t("messageCopied"));
             }}
           >
             <Copy className="h-4 w-4" />
-            Copiar mensagem
+            {t("share.copyMessage")}
           </Button>
         </div>
 
@@ -224,37 +248,31 @@ function LinkCard({
 
 function SettingsCard({ detail }: { detail: ScheduleViewProps["detail"] }) {
   const router = useRouter();
-  const [state, action] = useActionState<ActionResult | null, FormData>(
-    updateScheduleAction,
-    null,
-  );
-
-  React.useEffect(() => {
-    if (state?.ok) {
-      toast.success("Escala atualizada");
+  const t = useTranslations("schedules");
+  const { onSubmit, pending } = useFormAction(updateScheduleAction, {
+    onSuccess: () => {
+      toast.success(t("share.scheduleUpdated"));
       router.refresh();
-    } else if (state && !state.ok) {
-      toast.error(state.error);
-    }
-  }, [state, router]);
+    },
+  });
 
+  // `<input type="date">` wants the civil day in the parish's zone, never the
+  // reader's - which is exactly what `dayKey` returns.
   const deadlineValue = detail.schedule.availability_deadline
-    ? isoToDateInput(detail.schedule.availability_deadline, detail.timezone)
+    ? dayKey(detail.schedule.availability_deadline, detail.timezone)
     : "";
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Ajustes</CardTitle>
-        <CardDescription>
-          O recado aparece no topo do formulário, antes das datas.
-        </CardDescription>
+        <CardTitle className="text-base">{t("share.settingsTitle")}</CardTitle>
+        <CardDescription>{t("share.settingsDescription")}</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
           <input type="hidden" name="id" value={detail.schedule.id} />
           <div className="space-y-2">
-            <Label htmlFor="sch-title">Título</Label>
+            <Label htmlFor="sch-title">{t("fields.title")}</Label>
             <Input
               id="sch-title"
               name="title"
@@ -263,7 +281,7 @@ function SettingsCard({ detail }: { detail: ScheduleViewProps["detail"] }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sch-deadline-edit">Prazo</Label>
+            <Label htmlFor="sch-deadline-edit">{t("fields.deadline")}</Label>
             <Input
               id="sch-deadline-edit"
               name="deadline"
@@ -272,30 +290,19 @@ function SettingsCard({ detail }: { detail: ScheduleViewProps["detail"] }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="sch-note">Recado no formulário</Label>
+            <Label htmlFor="sch-note">{t("share.noteLabel")}</Label>
             <textarea
               id="sch-note"
               name="introNote"
               rows={3}
               defaultValue={detail.schedule.intro_note ?? ""}
               className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
-              placeholder="Coloquem todas as disponibilidades para facilitar a organização."
+              placeholder={t("share.notePlaceholder")}
             />
           </div>
-          <SubmitButton>Salvar</SubmitButton>
+          <SubmitButton pending={pending}>{t("save")}</SubmitButton>
         </form>
       </CardContent>
     </Card>
   );
-}
-
-/** timestamptz → "2026-10-23" no fuso do grupo, para o input type=date. */
-function isoToDateInput(iso: string, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(iso));
-  return parts;
 }

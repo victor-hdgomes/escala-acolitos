@@ -1,6 +1,6 @@
 /**
- * Tipos do banco, escritos à mão e espelhando `supabase/migrations`.
- * Ao alterar uma migration, alterar aqui também.
+ * Database types, written by hand and mirroring `supabase/migrations`.
+ * Change a migration, change this too.
  */
 
 export type Role = "admin" | "coordinator" | "member";
@@ -11,17 +11,20 @@ export type ScheduleStatus =
   | "published"
   | "archived";
 export type EventKind = "mass" | "novena" | "special";
-/** O que a escala é: o mês inteiro, uma novena avulsa, ou outra devoção. */
+/** What the schedule is: a whole month, a standalone novena, or another devotion. */
 export type ScheduleKind = "monthly" | "novena" | "special";
 export type SignupMode = "availability" | "direct";
 export type AssignmentStatus = "confirmed" | "swap_requested";
 export type SwapStatus = "open" | "filled" | "cancelled";
+/** Who may answer a schedule: anyone holding the link, or only group accounts. */
+export type FillAccess = "open" | "members";
 
 export type Parish = {
   id: string;
   name: string;
   slug: string;
   timezone: string;
+  fill_access: FillAccess;
   created_at: string;
   updated_at: string;
 }
@@ -32,6 +35,8 @@ export type Profile = {
   email: string | null;
   theme: string;
   is_superadmin: boolean;
+  /** Short code the account reads out to a coordinator to be added. */
+  join_code: string;
   created_at: string;
   updated_at: string;
 }
@@ -46,6 +51,25 @@ export type Invite = {
   expires_at: string;
   accepted_by: string | null;
   accepted_at: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+/**
+ * A reusable way in. Unlike an invite, it is not burnt on acceptance: the
+ * coordinator posts it once and everyone who signs up through it joins.
+ */
+export type JoinLink = {
+  id: string;
+  parish_id: string;
+  token: string;
+  role: Role;
+  label: string | null;
+  active: boolean;
+  expires_at: string | null;
+  /** Null means no ceiling on how many people may use it. */
+  max_uses: number | null;
+  uses: number;
   created_by: string | null;
   created_at: string;
 }
@@ -194,6 +218,7 @@ export type Database = {
       profiles: Table<Profile>;
       memberships: Table<Membership>;
       invites: Table<Invite>;
+      join_links: Table<JoinLink>;
       locations: Table<Location>;
       people: Table<Person>;
       mass_templates: Table<MassTemplate>;
@@ -205,8 +230,8 @@ export type Database = {
       email_log: Table<EmailLog>;
       audit_log: Table<AuditLog>;
     };
-    // Nenhuma view/função exposta ao PostgREST; os tipos abaixo só existem
-    // para satisfazer o formato que o supabase-js espera do schema.
+    // No view or function is exposed to PostgREST; the types below exist only
+    // to satisfy the shape supabase-js expects from the schema.
     Views: Record<string, { Row: Record<string, unknown>; Relationships: [] }>;
     Functions: Record<string, { Args: Record<string, unknown>; Returns: unknown }>;
     Enums: Record<string, string>;

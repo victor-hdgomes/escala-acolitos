@@ -1,12 +1,27 @@
-import {
-  formatFullDate,
-  formatShortDate,
-  formatTime,
-  monthLabel,
-  weekdayLong,
-} from "@/lib/date";
+import type { DateFormatter } from "@/lib/date";
 import type { ScheduleKind } from "@/lib/db/types";
-import type { DayGroup, EventView, ScheduleDetail } from "@/lib/schedule/types";
+import { novenaDayOnly } from "@/lib/schedule/generate";
+import type {
+  DayGroup,
+  EventView,
+  ScheduleDetail,
+  Translate,
+} from "@/lib/schedule/types";
+
+/**
+ * The text the coordinator pastes into the group: WhatsApp messages and the
+ * CSV export.
+ *
+ * None of it is rendered by React, so none of it can reach for a hook. Every
+ * builder takes the translator and the date formatter the caller already has -
+ * `useTranslations("whatsapp")` plus `useDateFormatter()` in a client
+ * component, `getTranslations` plus `getDateFormatter` on the server. The
+ * parish's time zone rides along inside the formatter.
+ */
+interface TextContext {
+  t: Translate;
+  df: DateFormatter;
+}
 
 export function personLabel(p: {
   full_name: string;
@@ -22,29 +37,53 @@ function namesOf(event: EventView): string[] {
 }
 
 /**
- * Numa escala de novena o título já diz qual devoção é; repetir o nome em
- * cada um dos nove dias só faz a mensagem crescer. "1º dia da Novena em honra
- * a X" vira "1º dia".
+ * In a novena's own schedule the title already says which devotion it is;
+ * repeating the name on each of the nine days only makes the message longer.
+ * "Day 1 - Novena to Saint Joseph" becomes "Day 1".
  */
-function eventLabel(
-  label: string | null,
-  schedule: { title: string; kind?: ScheduleKind },
-): string | null {
-  if (!label || schedule.kind !== "novena") return label;
-  const suffix = ` da ${schedule.title}`;
-  return label.endsWith(suffix) ? label.slice(0, -suffix.length) : label;
+function eventLabel(label: string | null, kind?: ScheduleKind): string | null {
+  if (!label || kind !== "novena") return label;
+  return novenaDayOnly(label);
+}
+
+/** "Sunday, 08/11 at 7:30 PM" - the one way this product names an instant. */
+function whenOf({ t, df }: TextContext, startsAt: string): string {
+  return t("when", {
+    weekday: df.weekday(startsAt),
+    date: df.shortDate(startsAt),
+    time: df.time(startsAt),
+  });
 }
 
 /**
- * A mensagem que abre o preenchimento — o equivalente ao "Bom dia, pessoal"
- * que o coordenador manda hoje no grupo com o link do Google Forms.
+ * The month name in the three casings the messages need.
+ *
+ * Casing is part of a language's grammar, not of the data: English keeps
+ * "November" capitalised mid-sentence and Portuguese does not. So all three
+ * forms go into the message and each locale's copy picks the one it wants.
+ */
+export function monthForms(df: DateFormatter, monthIso: string) {
+  const month = df.monthLabel(monthIso);
+  return {
+    month,
+    monthLower: month.toLowerCase(),
+    monthUpper: month.toUpperCase(),
+  };
+}
+
+/**
+ * The message that opens the filling - the equivalent of the "Morning,
+ * everyone" the coordinator posts today in the group with the Google Forms
+ * link.
  */
 export function buildInviteMessage({
+  t,
+  df,
   schedule,
   url,
   deadlineLabel,
   hasNovena,
-}: {
+}: TextContext & {
   schedule: { title: string; month: string; kind?: ScheduleKind };
   url: string;
   deadlineLabel: string | null;
@@ -52,66 +91,67 @@ export function buildInviteMessage({
 }): string {
   const isNovena = schedule.kind === "novena";
   const lines = [
-    "Bom dia, pessoal! 🙏",
+    t("invite.greeting"),
     "",
     isNovena
-      ? `Está aberta a escala da ${schedule.title}. Deixo o link para nos organizarmos:`
-      : `Está aberta a escala de ${monthLabel(schedule.month).toLowerCase()}. Deixo o link para que possamos nos organizar com calma:`,
+      ? t("invite.openedNovena", { title: schedule.title })
+      : t("invite.openedMonthly", monthForms(df, schedule.month)),
     "",
     url,
     "",
   ];
-  // Só vale avisar quando a novena está dentro da escala do mês; se ela tem
-  // escala própria, este link já é o dela.
+  // Only worth mentioning when the novena sits inside the month's schedule; if
+  // it has a schedule of its own, this link is already that one.
   if (hasNovena && !isNovena) {
-    lines.push(
-      "A escala da novena está nesse mesmo link, podem preencher tudo junto.",
-      "",
-    );
+    lines.push(t("invite.novenaIncluded"), "");
   }
   if (deadlineLabel) {
-    lines.push(`⏰ Preenchimento disponível até ${deadlineLabel}.`);
+    lines.push(t("invite.deadline", { deadline: deadlineLabel }));
   }
   lines.push(
     "",
-    isNovena
-      ? "Basta abrir, escolher o seu nome e pegar o dia que puder."
-      : "Basta abrir, escolher o seu nome e marcar as datas.",
+    isNovena ? t("invite.howToNovena") : t("invite.howToMonthly"),
   );
   return lines.join("\n");
 }
 
-/** Mensagem de escala publicada. */
+/** The "schedule is out" message. */
 export function buildPublishedMessage({
+  t,
+  df,
   schedule,
   url,
-}: {
+}: TextContext & {
   schedule: { title: string; month: string; kind?: ScheduleKind };
   url: string;
 }): string {
   return [
     schedule.kind === "novena"
-      ? `✅ *${schedule.title.toUpperCase()}* — escala publicada!`
-      : `✅ *ESCALA DE ${monthLabel(schedule.month).toUpperCase()}* publicada!`,
+      ? t("published.titleNovena", { title: schedule.title.toUpperCase() })
+      : t("published.titleMonthly", monthForms(df, schedule.month)),
     "",
-    "Confiram onde cada um está servindo:",
+    t("published.body"),
     url,
     "",
-    "Quem não puder em alguma data, peça substituição pelo próprio link.",
+    t("published.footer"),
   ].join("\n");
 }
 
 /**
- * A escala inteira em texto, agrupada por dia. WhatsApp não renderiza tabela,
- * então a tabela de colunas do documento vira lista — mais longa, porém
- * legível no celular, que é onde isso é lido.
+ * The whole schedule as text, grouped by day. WhatsApp renders no table, so the
+ * document's columns become a list - longer, but readable on a phone, which is
+ * where this gets read.
  */
-export function buildScheduleText(detail: ScheduleDetail): string {
-  const { schedule, timezone, days } = detail;
+export function buildScheduleText({
+  t,
+  df,
+  detail,
+}: TextContext & { detail: ScheduleDetail }): string {
+  const { schedule, days } = detail;
   const out: string[] = [
     schedule.kind === "monthly"
-      ? `*ESCALA MINISTÉRIO DE ACÓLITOS — ${monthLabel(schedule.month).toUpperCase()}*`
-      : `*${schedule.title.toUpperCase()}*`,
+      ? t("scheduleText.titleMonthly", monthForms(df, schedule.month))
+      : t("scheduleText.titleOther", { title: schedule.title.toUpperCase() }),
     "",
   ];
 
@@ -119,16 +159,31 @@ export function buildScheduleText(detail: ScheduleDetail): string {
     const first = day.events[0];
     if (!first) continue;
     out.push(
-      `*${weekdayLong(first.starts_at, timezone)}, ${formatShortDate(first.starts_at, timezone)}*`,
+      t("scheduleText.dayHeading", {
+        weekday: df.weekday(first.starts_at),
+        date: df.shortDate(first.starts_at),
+      }),
     );
     for (const ev of day.events) {
       const names = namesOf(ev);
+      const label = eventLabel(ev.label, schedule.kind);
       out.push(
-        `• ${formatTime(ev.starts_at, timezone)} — ${ev.location.name}${
-          eventLabel(ev.label, schedule) ? ` (${eventLabel(ev.label, schedule)})` : ""
-        }`,
+        label
+          ? t("scheduleText.eventLineWithLabel", {
+              time: df.time(ev.starts_at),
+              location: ev.location.name,
+              label,
+            })
+          : t("scheduleText.eventLine", {
+              time: df.time(ev.starts_at),
+              location: ev.location.name,
+            }),
       );
-      out.push(names.length ? `  ${names.join(", ")}` : "  _sem acólitos_");
+      out.push(
+        names.length
+          ? t("scheduleText.namesLine", { names: names.join(", ") })
+          : t("scheduleText.noNames"),
+      );
     }
     out.push("");
   }
@@ -137,79 +192,86 @@ export function buildScheduleText(detail: ScheduleDetail): string {
 }
 
 /**
- * O formato de novena que o grupo já usa, com as vagas numeradas e as vazias
- * explícitas — é o que deixa claro o que falta preencher.
+ * The novena format the group already uses, with the slots numbered and the
+ * empty ones spelled out - that is what makes clear what is left to fill.
  */
 export function buildNovenaText({
+  t,
+  df,
   title,
   events,
-  timezone,
-}: {
+}: TextContext & {
   title: string;
   events: EventView[];
-  timezone: string;
 }): string {
-  const out: string[] = [`*${title.toUpperCase()}*`, ""];
+  const out: string[] = [t("novenaText.title", { title: title.toUpperCase() }), ""];
 
   for (const ev of events) {
-    out.push(
-      `- ${weekdayLong(ev.starts_at, timezone)}, ${formatShortDate(ev.starts_at, timezone)} às ${formatTime(ev.starts_at, timezone)}`,
-    );
+    out.push(t("novenaText.eventLine", { when: whenOf({ t, df }, ev.starts_at) }));
     for (let i = 1; i <= ev.slots; i++) {
       const slot = ev.slotsView.find((s) => s.position === i);
-      out.push(`${i}- ${slot?.person ? personLabel(slot.person) : ""}`);
+      out.push(
+        t("novenaText.slotLine", {
+          position: i,
+          name: slot?.person ? personLabel(slot.person) : "",
+        }),
+      );
     }
   }
 
   return out.join("\n");
 }
 
-/** Pedido de substituição pronto para colar no grupo. */
+/** A swap request ready to paste into the group. */
 export function buildSwapMessage({
+  t,
+  df,
   personName,
   event,
-  timezone,
   url,
   reason,
-}: {
+}: TextContext & {
   personName: string;
   event: { starts_at: string; locationName: string };
-  timezone: string;
   url: string;
   reason?: string | null;
 }): string {
-  const when = `${weekdayLong(event.starts_at, timezone)}, ${formatShortDate(event.starts_at, timezone)} às ${formatTime(event.starts_at, timezone)}`;
   return [
-    `🔄 *Preciso de substituição*`,
+    t("swap.title"),
     "",
-    `${personName} não vai conseguir servir ${when}, em ${event.locationName}.`,
-    reason ? `Motivo: ${reason}` : "",
+    t("swap.body", {
+      person: personName,
+      when: whenOf({ t, df }, event.starts_at),
+      location: event.locationName,
+    }),
+    reason ? t("swap.reason", { reason }) : "",
     "",
-    "Quem puder assumir, é só abrir e confirmar:",
+    t("swap.callToAction"),
     url,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-/** Cobrança de quem ainda não respondeu. */
+/** A nudge for whoever has not answered yet. */
 export function buildReminderMessage({
+  t,
   url,
   pendingNames,
   deadlineLabel,
-}: {
+}: Pick<TextContext, "t"> & {
   url: string;
   pendingNames: string[];
   deadlineLabel: string | null;
 }): string {
   return [
-    "⏰ *Faltam vocês na escala*",
+    t("reminder.title"),
     "",
     pendingNames.length
-      ? `Ainda não marcaram disponibilidade: ${pendingNames.join(", ")}.`
-      : "Ainda falta gente marcar disponibilidade.",
+      ? t("reminder.pending", { names: pendingNames.join(", ") })
+      : t("reminder.pendingUnknown"),
     "",
-    deadlineLabel ? `O preenchimento fecha ${deadlineLabel}.` : "",
+    deadlineLabel ? t("reminder.deadline", { deadline: deadlineLabel }) : "",
     url,
   ]
     .filter(Boolean)
@@ -217,22 +279,27 @@ export function buildReminderMessage({
 }
 
 /**
- * CSV no formato da planilha atual: uma linha por celebração, uma coluna por
- * vaga. É o que permite colar o resultado onde o ministério já usa.
+ * CSV in the shape of the spreadsheet they use today: one row per celebration,
+ * one column per slot. It is what lets the result be pasted where the ministry
+ * already works.
  */
-export function buildScheduleCsv(detail: ScheduleDetail): string {
-  const { timezone, days } = detail;
+export function buildScheduleCsv({
+  t,
+  df,
+  detail,
+}: TextContext & { detail: ScheduleDetail }): string {
+  const { days } = detail;
   const maxSlots = Math.max(
     1,
     ...days.flatMap((d) => d.events.map((e) => e.slots)),
   );
 
   const header = [
-    "DATA",
-    "DIA DA SEMANA",
-    "HORA",
-    "LOCAL",
-    ...Array.from({ length: maxSlots }, () => "ACÓLITO"),
+    t("csv.date"),
+    t("csv.weekday"),
+    t("csv.time"),
+    t("csv.location"),
+    ...Array.from({ length: maxSlots }, () => t("csv.server")),
   ];
 
   const rows = days.flatMap((day: DayGroup) =>
@@ -241,12 +308,13 @@ export function buildScheduleCsv(detail: ScheduleDetail): string {
         .slice()
         .sort((a, b) => a.position - b.position)
         .map((s) => (s.person ? personLabel(s.person) : ""));
+      const label = eventLabel(ev.label, detail.schedule.kind);
       return [
-        formatFullDate(ev.starts_at, timezone),
-        weekdayLong(ev.starts_at, timezone).toUpperCase(),
-        formatTime(ev.starts_at, timezone).toUpperCase(),
-        eventLabel(ev.label, detail.schedule)
-          ? `${ev.location.name} — ${eventLabel(ev.label, detail.schedule)}`
+        df.fullDate(ev.starts_at),
+        df.weekday(ev.starts_at).toUpperCase(),
+        df.time(ev.starts_at).toUpperCase(),
+        label
+          ? t("csv.locationWithLabel", { location: ev.location.name, label })
           : ev.location.name,
         ...Array.from({ length: maxSlots }, (_, i) => names[i] ?? ""),
       ];

@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import {
   ThemeProvider,
@@ -14,15 +16,14 @@ import "./globals.css";
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Escala de Acólitos",
-    template: "%s · Escala de Acólitos",
-  },
-  description:
-    "Monte a escala do ministério, colete disponibilidade por link e resolva substituições sem perder nada no grupo.",
-  manifest: "/manifest.webmanifest",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("app");
+  return {
+    title: { default: t("name"), template: `%s · ${t("name")}` },
+    description: t("tagline"),
+    manifest: "/manifest.webmanifest",
+  };
+}
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -34,32 +35,36 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const locale = await getLocale();
+
   return (
     <html
-      lang="pt-BR"
+      lang={locale}
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Aplica o tema antes da hidratação, senão a tela pisca branca no
-            primeiro paint. Via next/script: um <script> cru dentro de um
-            componente React não roda em navegação no cliente. */}
+        {/* Applies the theme before hydration, otherwise the screen flashes
+            white on first paint. Via next/script because a bare <script> inside
+            a React component never runs on client navigation. */}
         <Script id="theme-bootstrap" strategy="beforeInteractive">
           {themeBootstrapScript}
         </Script>
       </head>
       <body className="min-h-full bg-background text-foreground">
-        <ThemeProvider defaultTheme="dark">
-          <QueryProvider>
-            <TooltipProvider delayDuration={150}>
-              {children}
-              <Toaster richColors position="top-center" />
-            </TooltipProvider>
-          </QueryProvider>
-        </ThemeProvider>
+        <NextIntlClientProvider>
+          <ThemeProvider defaultTheme="dark">
+            <QueryProvider>
+              <TooltipProvider delayDuration={150}>
+                {children}
+                <Toaster richColors position="top-center" />
+              </TooltipProvider>
+            </QueryProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

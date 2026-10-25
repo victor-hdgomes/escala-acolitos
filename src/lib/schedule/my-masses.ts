@@ -19,10 +19,10 @@ export interface MyMass {
 }
 
 /**
- * As missas de uma pessoa, da mais próxima para a mais distante.
+ * One person's Masses, from the nearest to the furthest away.
  *
- * Só escalas publicadas: enquanto o coordenador monta, a escalação ainda pode
- * mudar e avisar antes da hora só gera confusão.
+ * Published schedules only: while the coordinator is still building, the
+ * assignments can change, and telling someone too early only causes confusion.
  */
 export async function loadMyMasses(
   personId: string,
@@ -91,7 +91,7 @@ export async function loadMyMasses(
         scheduleStatus: schedule.status,
         viewToken: schedule.view_token,
         startsAt: event.starts_at,
-        locationName: location?.name ?? "—",
+        locationName: location?.name ?? "-",
         locationColor: location?.color ?? "#888888",
         label: event.label,
         position: a.position,

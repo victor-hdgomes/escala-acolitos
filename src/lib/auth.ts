@@ -2,21 +2,28 @@ import "server-only";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Parish, Person, Role } from "@/lib/db/types";
 
-export const VIEW_AS_COOKIE = "escala-view-as";
-export const ACTIVE_PARISH_COOKIE = "escala-grupo";
+export const VIEW_AS_COOKIE = "altar-view-as";
+export const ACTIVE_PARISH_COOKIE = "altar-active-group";
+
+export type { Role };
+
+/**
+ * Every role, from the most to the least authority.
+ *
+ * Replaces the old `ROLE_LABEL` map, whose keys callers used as the list of
+ * roles while its values were hardcoded Portuguese. The label now lives in the
+ * catalog under `common.roles.<role>`, so the data and the copy stop travelling
+ * together.
+ */
+export const ROLES = ["admin", "coordinator", "member"] as const satisfies readonly Role[];
 
 const ROLE_RANK: Record<Role, number> = { member: 0, coordinator: 1, admin: 2 };
-
-export const ROLE_LABEL: Record<Role, string> = {
-  admin: "Administrador",
-  coordinator: "Coordenador",
-  member: "Acólito",
-};
 
 export interface ParishMembership {
   parish: Parish;
@@ -27,23 +34,23 @@ export interface SessionContext {
   userId: string;
   email: string | null;
   displayName: string;
-  /** Dono da instalação: enxerga e administra todos os grupos. */
+  /** Owner of the installation: sees and administers every group. */
   isSuperadmin: boolean;
-  /** Grupo em uso nesta navegação. */
+  /** Group in use for this navigation. */
   parish: Parish;
-  /** Todos os grupos a que esta conta pertence — alimenta o seletor. */
+  /** Every group this account belongs to - feeds the picker. */
   memberships: ParishMembership[];
-  /** Papel real no grupo ativo. */
+  /** Real role in the active group. */
   role: Role;
-  /** Papel em uso: admin pode rebaixar o seu para conferir as outras telas. */
+  /** Role in use: an admin can demote their own to check the other screens. */
   effectiveRole: Role;
-  /** Acólito vinculado a esta conta neste grupo, quando existe. */
+  /** Altar server linked to this account in this group, when there is one. */
   person: Person | null;
 }
 
 /**
- * Contexto da sessão. Null quando não há usuário logado ou quando a conta
- * ainda não pertence a nenhum grupo (o app manda para `/grupos/novo`).
+ * Session context. Null when nobody is signed in, or when the account does not
+ * belong to any group yet (the app sends it to `/groups/new`).
  */
 export async function getSessionContext(): Promise<SessionContext | null> {
   const supabase = await createClient();
@@ -77,7 +84,12 @@ export async function getSessionContext(): Promise<SessionContext | null> {
   return {
     userId: user.id,
     email: user.email ?? null,
-    displayName: profile?.display_name ?? user.email?.split("@")[0] ?? "Você",
+    // The last fallback is translated rather than hardcoded, and is only
+    // reached by an account with no profile name and no email at all.
+    displayName:
+      profile?.display_name ??
+      user.email?.split("@")[0] ??
+      (await getTranslations("common"))("you"),
     isSuperadmin,
     parish: active.parish,
     memberships,
@@ -88,8 +100,9 @@ export async function getSessionContext(): Promise<SessionContext | null> {
 }
 
 /**
- * Grupos da conta. O superadmin vê todos — e é por isso que esta leitura
- * usa a service role: sem membership, a policy de `parishes` o esconderia.
+ * The account's groups. The superadmin sees them all - which is why this read
+ * uses the service role: with no membership, the `parishes` policy would hide
+ * them.
  */
 async function loadMemberships(
   userId: string,
@@ -132,8 +145,8 @@ async function loadMemberships(
 }
 
 /**
- * "Ver como": o admin troca a própria visão sem trocar de conta. Só rebaixa —
- * ninguém ganha permissão por cookie.
+ * "View as": an admin changes their own view without changing account. It only
+ * ever demotes - nobody gains permission through a cookie.
  */
 async function resolveViewAs(role: Role): Promise<Role> {
   const jar = await cookies();
@@ -150,21 +163,23 @@ export async function requireSession(): Promise<SessionContext> {
   if (!user) redirect("/login");
 
   const ctx = await getSessionContext();
-  // Logado, mas sem grupo: o caminho é criar um ou aceitar um convite.
-  if (!ctx) redirect("/grupos/novo");
+  // Signed in, but in no group. Most accounts that land here are altar
+  // servers waiting to be added, not organisers, so the way forward is the
+  // waiting screen and not the "open a group" form.
+  if (!ctx) redirect("/pending");
   return ctx;
 }
 
-/** Coordenador ou admin. Usa o papel real: "ver como" não bloqueia ação. */
+/** Coordinator or admin. Uses the real role: "view as" never blocks an action. */
 export async function requireManager(): Promise<SessionContext> {
   const ctx = await requireSession();
-  if (ctx.role === "member") redirect("/inicio");
+  if (ctx.role === "member") redirect("/home");
   return ctx;
 }
 
 export async function requireAdmin(): Promise<SessionContext> {
   const ctx = await requireSession();
-  if (ctx.role !== "admin") redirect("/inicio");
+  if (ctx.role !== "admin") redirect("/home");
   return ctx;
 }
 
@@ -173,10 +188,11 @@ export function canManage(ctx: SessionContext): boolean {
 }
 
 /**
- * Dono da instalação. Consultado pelo id porque as ações que dependem disto
- * rodam antes de haver contexto de grupo — criar o primeiro grupo, por
- * exemplo. Lê com service role: a policy de `profiles` só deixa cada um ler
- * a própria linha, o que aqui basta, mas o id vem do servidor de qualquer forma.
+ * Owner of the installation. Looked up by id because the actions that depend on
+ * this run before there is any group context - creating the first group, for
+ * one. Reads with the service role: the `profiles` policy only lets each person
+ * read their own row, which is enough here, but the id comes from the server
+ * either way.
  */
 export async function isSuperadmin(userId: string): Promise<boolean> {
   const admin = createAdminClient();
@@ -186,4 +202,23 @@ export async function isSuperadmin(userId: string): Promise<boolean> {
     .eq("id", userId)
     .maybeSingle();
   return data?.is_superadmin ?? false;
+}
+
+/**
+ * Who may open a parish.
+ *
+ * An account with no group at all creates the first one - that is the app's
+ * front door, and without it nobody gets in on their own. Someone who already
+ * belongs to a group does not open more, which is what keeps an invited altar
+ * server away from creation. A superadmin always creates.
+ */
+export async function canCreateParish(userId: string): Promise<boolean> {
+  if (await isSuperadmin(userId)) return true;
+
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("memberships")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId);
+  return (count ?? 0) === 0;
 }

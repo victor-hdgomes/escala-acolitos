@@ -6,16 +6,17 @@ import { TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 /**
- * Barra de abas que rola na horizontal no celular.
+ * Tab bar that scrolls horizontally on a phone.
  *
- * O `TabsList` do shadcn é `inline-flex` com fundo arredondado e os gatilhos
- * são `flex-1`. Dando `w-full overflow-x-auto` nele, as abas se espremem e a
- * primeira e a última ficam cortadas pela própria borda do fundo. Aqui quem
- * rola é um contêiner externo; a lista cresce o quanto precisar
- * (`w-max min-w-full`) e as abas mantêm a largura natural.
+ * shadcn's `TabsList` is `inline-flex` with a rounded background, and the
+ * triggers are `flex-1`. Giving it `w-full overflow-x-auto` squeezes the tabs
+ * and clips the first and the last against the background's own edge. Here it
+ * is an outer container that scrolls; the list grows as much as it needs
+ * (`w-max min-w-full`) and the tabs keep their natural width.
  *
- * A margem negativa faz a rolagem chegar à borda da tela, alinhada ao `px-4`
- * da página — sem ela, a última aba parece cortada mesmo rolando até o fim.
+ * The negative margin makes the scroll reach the edge of the screen, aligned
+ * with the page's `px-4` - without it, the last tab looks cut off even when
+ * scrolled all the way.
  */
 export function ScrollTabsList({
   children,

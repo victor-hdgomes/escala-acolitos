@@ -1,33 +1,29 @@
 -- ============================================================================
--- Primeiro acesso — rode DEPOIS de criar sua conta em /signup
+-- Claiming the installation. Run this AFTER creating your account at /signup.
 --
--- Troque o e-mail abaixo pelo da conta que você acabou de criar.
--- Isto faz duas coisas:
---   • admin da paróquia do seed, para você entrar direto no grupo
---   • superadmin da instalação, para enxergar e administrar todos os grupos
+-- Put your own address below and run it once. It makes that account the
+-- superadmin: the one person who sees and administers every group.
+--
+-- There is no screen that grants this, deliberately. The superadmin is marked
+-- from here or from the Supabase SQL editor, where `auth.uid()` is null and
+-- the guard in migration 0005 lets the change through. Everybody else, from
+-- the app and through the API, is refused.
+--
+-- It does not put you in any group. Groups are self-service: open yours at
+-- /groups/new, or join one with the link its coordinator sends you.
 -- ============================================================================
 
 do $$
 declare
-  v_email text := 'SEU@EMAIL.COM';   -- <<< troque aqui
+  v_email text := 'YOU@EXAMPLE.COM';   -- <<< change this
   v_user uuid;
-  v_parish uuid;
 begin
   select id into v_user from auth.users where lower(email) = lower(v_email);
   if v_user is null then
-    raise exception 'Nenhuma conta com o e-mail %. Cadastre-se em /signup primeiro.', v_email;
+    raise exception 'No account with the address %. Sign up at /signup first.', v_email;
   end if;
-
-  select id into v_parish from public.parishes order by created_at limit 1;
-  if v_parish is null then
-    raise exception 'Nenhum grupo no banco. Rode supabase/setup.sql antes.';
-  end if;
-
-  insert into public.memberships (parish_id, user_id, role)
-  values (v_parish, v_user, 'admin')
-  on conflict (parish_id, user_id) do update set role = 'admin';
 
   update public.profiles set is_superadmin = true where id = v_user;
 
-  raise notice 'Pronto: % agora é admin do grupo e superadmin.', v_email;
+  raise notice '% is now the superadmin of this installation.', v_email;
 end $$;

@@ -137,9 +137,9 @@ function Select({
 
   return (
     <SelectContext.Provider value={ctx}>
-      {/* modal: sem isso, o react-remove-scroll do Dialog bloqueia o wheel no
-          conteúdo portalado do popover (dá pra arrastar a barra, mas a roda
-          do mouse não rola a lista). */}
+      {/* modal: without it, the Dialog's react-remove-scroll blocks the wheel over the
+          portalled popover content: the scrollbar drags, but the mouse
+          wheel does not move the list. */}
       <PopoverPrimitive.Root modal open={open} onOpenChange={setOpen}>
         {children}
       </PopoverPrimitive.Root>

@@ -1,13 +1,16 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
-      // Nada aqui sobe arquivo; o default do Next também é 1MB, explícito pra
-      // não regredir sem querer.
+      // Nothing here uploads a file; Next's own default is 1MB too, stated
+      // explicitly so it can't regress by accident.
       bodySizeLimit: "1mb",
     },
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

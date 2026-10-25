@@ -1,189 +1,307 @@
-# Escala de Acólitos
+# Altar Roster
 
-Substitui o fluxo de Google Forms → planilha → tabela no WhatsApp do ministério
-de acólitos. Mobile-first, com link público para preenchimento (sem login),
-montagem assistida e substituição que se resolve sozinha.
+Scheduling for parish altar server ministries.
 
-Stack: Next.js 16 (App Router + Server Actions), React 19, TypeScript,
-Tailwind v4, shadcn/ui, Supabase (Postgres + Auth + RLS), Resend.
+Most ministries run on the same three tools: a Google Form, a spreadsheet, and
+a screenshot of that spreadsheet pasted into the parish WhatsApp group. It
+works until somebody cannot make Saturday evening, and then it does not work
+at all, because the schedule everyone is looking at is already out of date and
+nobody knows who is missing.
+
+This replaces that loop. The coordinator opens the month, posts one link in
+the group, and the altar servers mark the Masses they can serve. No account,
+no password, nothing to install. Then the coordinator assembles the schedule
+with the app suggesting who is owed a turn, publishes it as a read-only link
+that is always current, and cover requests resolve themselves: first to tap
+takes the slot.
+
+Mobile first, because that is where every single person in this story is.
+English and Brazilian Portuguese, switchable from any screen.
 
 ---
 
-## Como subir
+## What it does
+
+| | |
+| --- | --- |
+| **The month writes itself** | Set the weekly Mass pattern once. Every month after that is generated from it, and the coordinator only adjusts. |
+| **Answering takes one tap** | Filter to Sundays and mornings, mark all twelve dates at once, done. |
+| **You can see who is missing** | The form never told you which thirty-two of your fifty-four people had not answered. This does. |
+| **Assembly that argues back** | Suggestions ranked by who is owed a turn, with same-day conflicts flagged, including against a novena running beside the Mass. |
+| **Cover requests settle themselves** | A link goes in the group chat; whoever taps first takes the slot, and the coordinator is told rather than asked. |
+| **Novenas work the way they already do** | Nine evenings, slots numbered one to six, claimed directly. Except a slot cannot be claimed twice. |
+| **One account, several chapels** | An altar server who serves at two places joins both groups and switches between them. |
+| **Install it like an app** | It is a PWA: one tap puts it on the home screen, full screen, no browser bar. |
+
+---
+
+## Getting started
 
 ### 1. Supabase
 
-Crie um projeto em [supabase.com](https://supabase.com) e cole
-`supabase/setup.sql` inteiro no SQL Editor — é o schema + RLS + o seed da
-Paróquia Cristo Rei (7 locais, grade semanal, 54 acólitos) num arquivo só.
-
-Preferindo separado: `supabase/migrations/0001_init.sql` e depois
-`supabase/seed.sql`. Com a connection string do Postgres em `SUPABASE_DB_URL`,
-dá para aplicar tudo pelo terminal:
+Create a project at [supabase.com](https://supabase.com) and paste
+`supabase/setup.sql` into the SQL editor. It is the whole schema, the row
+level security policies and nothing else: no parish, no names, no data. It is
+generated from `supabase/migrations/`, so it can never fall behind them.
 
 ```bash
-npm run db setup
+npm run db:setup          # regenerates supabase/setup.sql from the migrations
 ```
 
-Em **Authentication → Providers**, deixe e-mail/senha ligado. Para testar sem
-caixa de entrada, desligue "Confirm email".
+With the Postgres connection string in `SUPABASE_DB_URL` you can apply it from
+the terminal instead:
 
-### 2. Variáveis
+```bash
+npm run db migrate
+```
+
+In **Authentication, Providers**, leave email and password enabled. To try it
+without an inbox, turn "Confirm email" off.
+
+### 2. Environment
 
 ```bash
 cp .env.example .env.local
 ```
 
-Preencha `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
-`SUPABASE_SERVICE_ROLE_KEY` (Settings → API). Projetos antigos têm `anon key`
-em vez de publishable — o app aceita as duas.
+Fill in `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` and
+`SUPABASE_SERVICE_ROLE_KEY` (Settings, API). Older projects have an `anon key`
+instead of a publishable one; both work.
 
-`RESEND_API_KEY` é opcional: sem ela o app funciona igual e só não envia
-e-mail.
+`RESEND_API_KEY` is optional. Without it everything works the same and no
+email goes out.
 
-### 3. Rodar
+### 3. Run
 
 ```bash
 npm install && npm run dev
 ```
 
-### 4. Primeiro acesso
+### 4. First sign-in
 
-1. Crie sua conta em `/signup`
-2. Rode `supabase/grant-admin.sql` no SQL Editor, trocando o e-mail no topo.
-   Ele te torna admin do grupo do seed e superadmin da instalação (enxerga e
-   administra todos os grupos). Pelo terminal: `npm run db grant voce@email.com`.
+Create your account at `/signup` and the app takes you straight to opening
+your group. You join it as its administrator.
 
-Sem o seed, o app leva você direto para `/grupos/novo` e você cria o grupo
-pela interface — quem cria entra como administrador.
+If this installation is yours, also run `supabase/grant-admin.sql` with your
+address at the top. That makes you the **superadmin**: the one account that
+sees and administers every group. From the terminal:
+`npm run db grant you@example.com`.
 
----
-
-## Os três papéis
-
-| Papel | O que faz |
-| --- | --- |
-| **Administrador** | Tudo dentro do grupo: membros, papéis, convites, locais, grade, escalas |
-| **Coordenador** | Cria e monta escalas, gerencia a lista de acólitos |
-| **Acólito** | Vê as próprias missas e pede substituição |
-
-Um administrador pode rebaixar a própria visão em **Ver como** para conferir as
-telas dos outros sem trocar de conta — sem perder permissão de verdade.
-
-Uma conta participa de **vários grupos** com papel diferente em cada um; o
-seletor fica no topo da barra lateral (e no menu "Mais", no celular).
-
-Acima dos três há o **superadmin**, o dono da instalação (`profiles.is_superadmin`):
-enxerga e administra todos os grupos e é o único que cria grupos novos. Não há
-tela que conceda esse papel — ele é marcado no banco, de propósito. Quem entra
-por convite nunca consegue abrir um grupo próprio.
+Want something on the screens before you have a real group?
+`supabase/seed.sql` loads an invented parish with seven places, a weekly
+pattern and twenty-four fictional names. It is demo data and nothing depends
+on it.
 
 ---
 
-## Tipos de escala
+## How people get in
 
-| Tipo | Quando usar |
+Three doors, because three different people arrive.
+
+**The join link.** The coordinator creates one in **Group, Members** and posts
+it once in the WhatsApp group. Anyone who signs up through it lands inside the
+group already, with the role the link carries. It can be capped at a number of
+people, given an expiry, paused, or deleted.
+
+**The join code.** Someone who signs up on their own has no group, so they
+land on a waiting screen showing a short code: `K7P4-R2MQ`. They read it out
+to whoever coordinates, who types it into **Add someone by code** and adds
+them, optionally tying the account to a name already on the altar servers
+list. Nothing here is searchable: the code or the full address has to be
+handed over first, so this is never a way to browse accounts.
+
+**The named invitation.** One seat, for one person, optionally tied to one
+name on the list, burnt on acceptance. Right for handing someone the keys.
+
+### Who may answer a schedule
+
+Each group decides, in **Group, General**:
+
+- **Anyone with the link.** No account needed. Whoever opens the link picks
+  their name and marks their dates. This is the easiest way to start, and it
+  is what makes the app usable by a ministry of thirteen-year-olds.
+- **Only people in this group.** Answering needs an account that belongs to
+  the group. Someone who opens the link without one is shown how to join
+  rather than refused.
+
+Either way, a name that has been linked to an account can only be marked by
+that account. That is what stops someone answering in your place.
+
+---
+
+## The roles
+
+| Role | What it does |
 | --- | --- |
-| **Mensal** | As missas do mês, geradas da grade semanal |
-| **Novena** | Dias seguidos de uma devoção, com link e prazo próprios |
+| **Administrator** | Everything inside the group: members, roles, invitations, join links, places, the weekly pattern, schedules |
+| **Coordinator** | Creates and assembles schedules, manages the altar servers list |
+| **Altar server** | Sees their own Masses and asks for cover |
 
-A novena pode viver dentro da escala do mês (aba **Celebrações → Novena**) ou
-ter escala própria (**Nova escala → Novena**). Com escala própria, o mês sai
-sem ela e as duas circulam no grupo como mensagens separadas — que é como o
-ministério já trata as duas coisas.
+An administrator can demote their own *view* with **View as**, to check the
+other screens without switching account and without actually losing
+permission.
 
-Quando duas escalas convivem no mesmo mês, a montagem avisa se a pessoa já
-está escalada naquele dia **na outra escala**: sem isso, o app sugeriria a
-mesma pessoa para a missa das 19h30 e para a novena das 19h30 do mesmo dia.
+One account belongs to **several groups** with a different role in each. The
+picker is at the top of the sidebar, and in the "More" menu on a phone.
 
-## O fluxo
+Above the three sits the **superadmin**, the owner of the installation
+(`profiles.is_superadmin`): the only account that sees every group. No screen
+grants that role. It is set in the database on purpose, and since migration
+0005 it is **unique and immutable**: a unique index blocks a second promotion
+and a trigger stops any authenticated session from changing the field, its own
+row included. Without that, the `profiles_update_own` policy would let any
+account promote itself with a single PATCH against the API and start seeing
+every parish. A small risk in a one-parish installation, unacceptable with
+open sign-up.
+
+**Who may open a group** (migration 0004): an account in no group opens the
+first one, which is the way in. An account that already belongs to a group
+does not open others, which keeps an invited altar server away from creation.
+
+---
+
+## Kinds of schedule
+
+| Kind | When |
+| --- | --- |
+| **Monthly** | The month's Masses, generated from the weekly pattern |
+| **Novena** | A run of days for one devotion, with its own link and deadline |
+
+A novena can live inside the month's schedule (**Celebrations, Novena**) or
+have one of its own (**New schedule, Novena**). With its own, the month goes
+out without it and the two circulate in the group as separate messages, which
+is how the ministry already treats them.
+
+When two schedules share a month, assembly warns you if someone is already
+scheduled that day **on the other one**. Without it the app would cheerfully
+suggest the same person for the 7:30 pm Mass and the 7:30 pm novena.
+
+---
+
+## The flow
 
 ```
-Admin cadastra locais + grade semanal
-        ↓
-Coordenador cria a escala do mês  →  o mês nasce pronto a partir da grade
-        ↓
-Manda o link no WhatsApp          →  /e/<token>, sem login
-        ↓
-Acólitos marcam disponibilidade   →  filtros + "marcar as 12 datas"
-        ↓
-Coordenador monta                 →  sugestões ordenadas por quem está em falta
-        ↓
-Publica                           →  /v/<token> + e-mail para quem tem conta
-        ↓
-"Não vou conseguir"               →  /t/<token>, primeiro que clica assume
+Admin adds the places and the weekly pattern
+        |
+Coordinator opens the month        ->  generated from the pattern, ready to adjust
+        |
+Posts the link in WhatsApp         ->  /e/<token>, no sign-in
+        |
+Altar servers mark availability    ->  filters, and "mark all twelve dates"
+        |
+Coordinator assembles              ->  suggestions ordered by who is owed a turn
+        |
+Publishes                          ->  /v/<token>, plus email to linked accounts
+        |
+"I cannot make it"                 ->  /t/<token>, first to tap takes it
 ```
 
-### Links públicos
+### Public links
 
-| Rota | O que é |
+| Route | What it is |
 | --- | --- |
-| `/e/<token>` | Formulário de disponibilidade |
-| `/v/<token>` | Escala publicada, somente leitura |
-| `/t/<token>` | Pedido de substituição |
+| `/e/<token>` | Availability form |
+| `/v/<token>` | Published schedule, read only |
+| `/t/<token>` | Cover request |
+| `/j/<token>` | Join link for a group |
 
-Nenhum deles exige conta. Quem **quiser** pode criar uma e vincular o próprio
-nome — daí em diante só essa conta marca disponibilidade com aquele nome.
+One letter each, deliberately: these get pasted into WhatsApp, where a long
+URL wraps and starts to look like spam.
 
 ---
 
-## Decisões que valem saber
+## Decisions worth knowing
 
-**Por que a service role no acesso público.** O RLS do Supabase isola por
-`auth.uid()`, o que não existe em acesso anônimo. Então todo acesso por token
-passa por Server Action que resolve o token no servidor e confere que o
-`event_id`/`person_id` recebido pertence àquela escala. Nenhuma policy libera
-`anon`. Tudo que entra por link vai para `audit_log`, com hash de IP.
+**Why the service role on public access.** Supabase RLS isolates by
+`auth.uid()`, which does not exist for an anonymous visitor. So every path
+reached by token goes through a Server Action that resolves the token on the
+server and checks that the `event_id` or `person_id` it was handed belongs to
+that schedule. No policy opens anything to `anon`. Everything arriving by link
+is written to `audit_log`, with the IP hashed.
 
-**Por que a sugestão não escala sozinha.** `lib/schedule/suggest.ts` só ordena:
-peso maior para quem tem menos escalas no mês, penalidade para conflito no
-mesmo dia, bônus leve para afinidade com o local. A escolha continua do
-coordenador — inclusive com a opção de ver quem *não* marcou disponibilidade.
+**Why suggestions never assign on their own.** `lib/schedule/suggest.ts` only
+sorts: more weight to whoever has fewer turns this month, a penalty for a
+same-day conflict, a light bonus for familiarity with the place. The choice
+stays the coordinator's, including the option to see who did *not* mark
+availability.
 
-**Por que novena é diferente.** `events.signup_mode = 'direct'`: a vaga é
-numerada e o próprio acólito pega, igual à mensagem que o grupo já usa. A
-corrida entre dois cliques morre no índice único `(event_id, position)`.
+**Why a novena is different.** `events.signup_mode = 'direct'`: the slot is
+numbered and the altar server takes it, exactly like the message the group
+already uses. The race between two taps dies in the unique index on
+`(event_id, position)`.
 
-**Fuso.** `events.starts_at` é `timestamptz`; tudo que o usuário vê é
-convertido para o fuso do grupo (`lib/date.ts`, via `Intl`). Um grupo em
-Manaus e outro em Goiânia não viram o dia na mesma hora — o cron de lembrete
-leva isso em conta.
+**Time zones.** `events.starts_at` is `timestamptz`, and everything a reader
+sees is converted to the group's zone through `Intl` (`lib/date.ts`). Two
+groups in different zones do not turn the day at the same moment, and the
+reminder cron accounts for that.
 
-**E-mail é best-effort.** `email_log.dedupe_key` é único, então o cron rodar
-duas vezes não manda dois e-mails. Falha de envio nunca impede a publicação.
+**Translation is a contract, not a string.** Server Actions never return prose.
+They return a code from `lib/action-result.ts`, and the interface looks it up
+in the reader's language. `npm run check:messages` fails the build on a
+missing key, an extra one, or an ICU placeholder that does not match the
+English source.
+
+**Email is best effort.** `email_log.dedupe_key` is unique, so the cron
+running twice does not send twice. A failed send never blocks a publication.
 
 ---
 
 ## Scripts
 
 ```bash
-npm run dev        # desenvolvimento
-npm run build      # build de produção
-npm run typecheck  # tsc --noEmit
-npm run lint       # eslint
+npm run dev             # development
+npm run build           # production build
+npm run typecheck       # tsc --noEmit
+npm run lint            # eslint
+npm run check:messages  # catalog parity between locales
+npm run db:setup        # regenerate supabase/setup.sql from the migrations
 
-npm run db status              # o que já existe no banco
-npm run db setup               # migrations + seed
-npm run db grant voce@email.com
+npm run db status                 # what the database already holds
+npm run db migrate                # apply supabase/migrations/*.sql
+npm run db grant you@example.com  # make that account the superadmin
 ```
 
-Para ver o app com dados sem reunir 54 pessoas:
+To see the app full of data without gathering fifty-four people:
 
 ```bash
-node scripts/demo-schedule.mjs 2026-11 --reset   # cria a escala do mês pela grade
-node scripts/demo-fill.mjs     2026-11 --reset   # disponibilidades + montagem
+node scripts/demo-schedule.mjs 2026-11 --reset   # the month, from the pattern
+node scripts/demo-fill.mjs     2026-11 --reset   # availabilities and assembly
 ```
 
-O sorteio tem semente fixa, então o resultado é o mesmo a cada execução, e
-`--reset` limpa o que havia antes. Os dois usam a API REST com a service role.
+The draw has a fixed seed, so every run produces the same result and two runs
+of a screen are comparable. `--reset` clears what was there. Both use the REST
+API with the service role.
 
-Os comandos `db` precisam de `SUPABASE_DB_URL` no `.env.local`
-(painel → Connect → Connection string → URI). DDL não passa pela API REST,
-por isso a conexão direta.
+Starting over:
+
+```bash
+node scripts/wipe-schedules.mjs --confirm   # schedules only, setup intact
+node scripts/wipe-all.mjs --confirm         # everything but the accounts
+```
+
+The `db` commands need `SUPABASE_DB_URL` in `.env.local` (Dashboard, Connect,
+Connection string, URI). DDL does not go through the REST API, hence the
+direct connection.
+
+---
 
 ## Deploy
 
-Vercel + Supabase. `vercel.json` já agenda o lembrete de véspera
-(`/api/cron/lembretes`, 8h de Brasília); proteja com `CRON_SECRET`.
-Lembre de apontar `NEXT_PUBLIC_APP_URL` para o domínio real — é ele que entra
-nos links mandados no grupo.
+Vercel plus Supabase. `vercel.json` already schedules the evening-before
+reminder (`/api/cron/reminders`); protect it with `CRON_SECRET`. Point
+`NEXT_PUBLIC_APP_URL` at the real domain: that is what goes into every link
+posted in the group.
+
+---
+
+## Stack
+
+Next.js 16 (App Router, Server Actions), React 19, TypeScript, Tailwind v4,
+shadcn/ui, next-intl, Supabase (Postgres, Auth, RLS), Resend.
+
+---
+
+Named for **Saint Tarcisius**, a boy who carried the Eucharist through Rome
+and was killed rather than give it up. Nothing of the sort is asked of the
+children in your sacristy. Only that they serve, and that somebody keeps track
+of who, carefully, and without anyone being forgotten.

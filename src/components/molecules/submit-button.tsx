@@ -20,8 +20,8 @@ export function SubmitButton({
   size?: React.ComponentProps<typeof Button>["size"];
   disabled?: boolean;
   /**
-   * `useFormStatus` só enxerga formulários com `action`. Quem submete por
-   * `onSubmit` (ver `useFormAction`) informa o pendente por aqui.
+   * `useFormStatus` only sees forms with an `action`. Whoever submits through
+   * `onSubmit` (see `useFormAction`) reports the pending state here.
    */
   pending?: boolean;
 }) {

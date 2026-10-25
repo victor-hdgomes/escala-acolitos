@@ -1,6 +1,7 @@
 /**
- * Design tokens em TS — referência para uso programático (gráficos, mapas de
- * cor dinâmicos). Mesma escala do globals.css.
+ * The design tokens in TypeScript, for the places that need them as values
+ * rather than as CSS: chart series, colour scales computed at run time. Same
+ * scale as globals.css, which stays the source of truth for the themes.
  */
 
 export const tokens = {

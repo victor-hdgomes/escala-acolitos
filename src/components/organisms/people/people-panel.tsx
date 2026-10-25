@@ -12,6 +12,7 @@ import {
   Trash2,
   UserCheck,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
@@ -20,8 +21,9 @@ import {
   savePersonAction,
   togglePersonActiveAction,
   unlinkPersonAction,
-} from "@/app/(app)/grupo/actions";
+} from "@/app/(app)/group/actions";
 import { SubmitButton } from "@/components/molecules/submit-button";
+import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +60,7 @@ export function PeoplePanel({
   isAdmin: boolean;
   currentPersonId: string | null;
 }) {
+  const t = useTranslations("people");
   const [query, setQuery] = React.useState("");
   const [onlyInactive, setOnlyInactive] = React.useState(false);
 
@@ -84,9 +87,9 @@ export function PeoplePanel({
     <div className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">Acólitos</h1>
+          <h1 className="text-xl font-semibold tracking-tight">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {people.length} no grupo · {claimed} com conta vinculada
+            {t("summary", { total: people.length, linked: claimed })}
           </p>
         </div>
         <div className="flex gap-2">
@@ -101,20 +104,20 @@ export function PeoplePanel({
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar nome"
+            placeholder={t("searchPlaceholder")}
             className="pl-9"
           />
         </div>
         <label className="flex items-center gap-2 text-sm text-muted-foreground">
           <Switch checked={onlyInactive} onCheckedChange={setOnlyInactive} />
-          Só inativos
+          {t("onlyInactive")}
         </label>
       </div>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">
-            {filtered.length} {filtered.length === 1 ? "pessoa" : "pessoas"}
+            {t("count", { count: filtered.length })}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-1">
@@ -126,7 +129,7 @@ export function PeoplePanel({
           ))}
           {filtered.length === 0 ? (
             <p className="py-8 text-center text-sm text-muted-foreground">
-              Ninguém encontrado.
+              {t("emptyState")}
             </p>
           ) : null}
         </CardContent>
@@ -142,6 +145,8 @@ function PersonLine({
   person: PersonRow;
   isAdmin: boolean;
 }) {
+  const t = useTranslations("people");
+  const resultError = useResultError();
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
 
@@ -153,25 +158,29 @@ function PersonLine({
           {person.claimed ? (
             <Lock
               className="h-3.5 w-3.5 shrink-0 text-[color:var(--color-filled)]"
-              aria-label="Conta vinculada"
+              aria-label={t("row.linkedAccount")}
             />
           ) : null}
         </p>
         <p className="truncate text-xs text-muted-foreground">
           {person.claimed
-            ? (person.claimedEmail ?? "conta vinculada")
-            : (person.email ?? "sem conta vinculada")}
+            ? (person.claimedEmail ?? t("row.linkedAccountUnknown"))
+            : (person.email ?? t("row.noAccount"))}
         </p>
       </div>
-      {!person.active ? <Badge variant="secondary">inativo</Badge> : null}
+      {!person.active ? (
+        <Badge variant="secondary">{t("row.inactive")}</Badge>
+      ) : null}
       <Switch
         checked={person.active}
         disabled={pending}
-        aria-label="Ativo"
+        aria-label={t("row.activeToggle")}
         onCheckedChange={(checked) =>
           startTransition(async () => {
-            const res = await togglePersonActiveAction(person.id, checked);
-            if (!res.ok) toast.error(res.error);
+            const message = resultError(
+              await togglePersonActiveAction(person.id, checked),
+            );
+            if (message) toast.error(message);
             else router.refresh();
           })
         }
@@ -182,13 +191,13 @@ function PersonLine({
           size="icon"
           variant="ghost"
           disabled={pending}
-          aria-label="Desvincular conta"
+          aria-label={t("row.unlink")}
           onClick={() =>
             startTransition(async () => {
-              const res = await unlinkPersonAction(person.id);
-              if (!res.ok) toast.error(res.error);
+              const message = resultError(await unlinkPersonAction(person.id));
+              if (message) toast.error(message);
               else {
-                toast.success("Vínculo desfeito");
+                toast.success(t("row.unlinked"));
                 router.refresh();
               }
             })
@@ -202,11 +211,11 @@ function PersonLine({
           size="icon"
           variant="ghost"
           disabled={pending}
-          aria-label={`Excluir ${person.full_name}`}
+          aria-label={t("row.delete", { name: person.full_name })}
           onClick={() =>
             startTransition(async () => {
-              const res = await deletePersonAction(person.id);
-              if (!res.ok) toast.error(res.error);
+              const message = resultError(await deletePersonAction(person.id));
+              if (message) toast.error(message);
               else router.refresh();
             })
           }
@@ -219,6 +228,8 @@ function PersonLine({
 }
 
 function PersonDialog({ person }: { person?: PersonRow }) {
+  const t = useTranslations("people");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(savePersonAction, {
@@ -226,35 +237,37 @@ function PersonDialog({ person }: { person?: PersonRow }) {
       setOpen(false);
       router.refresh();
     },
-    onError: (message) => toast.error(message),
   });
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {person ? (
-          <Button size="icon" variant="ghost" aria-label={`Editar ${person.full_name}`}>
+          <Button
+            size="icon"
+            variant="ghost"
+            aria-label={t("dialog.editAria", { name: person.full_name })}
+          >
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
           <Button size="sm">
             <Plus className="h-4 w-4" />
-            Novo
+            {tCommon("new")}
           </Button>
         )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{person ? "Editar acólito" : "Novo acólito"}</DialogTitle>
-          <DialogDescription>
-            O e-mail aqui serve para avisos. Vincular conta é outra coisa — quem
-            vincula é a própria pessoa, ou um convite nominal.
-          </DialogDescription>
+          <DialogTitle>
+            {person ? t("dialog.editTitle") : t("dialog.createTitle")}
+          </DialogTitle>
+          <DialogDescription>{t("dialog.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           {person ? <input type="hidden" name="id" value={person.id} /> : null}
           <div className="space-y-2">
-            <Label htmlFor="p-name">Nome completo</Label>
+            <Label htmlFor="p-name">{t("dialog.fullName")}</Label>
             <Input
               id="p-name"
               name="fullName"
@@ -263,17 +276,17 @@ function PersonDialog({ person }: { person?: PersonRow }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="p-short">Como aparece na escala</Label>
+            <Label htmlFor="p-short">{t("dialog.shortName")}</Label>
             <Input
               id="p-short"
               name="shortName"
               defaultValue={person?.short_name ?? ""}
-              placeholder="opcional"
+              placeholder={tCommon("optional")}
             />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="p-email">E-mail</Label>
+              <Label htmlFor="p-email">{t("dialog.email")}</Label>
               <Input
                 id="p-email"
                 name="email"
@@ -282,11 +295,13 @@ function PersonDialog({ person }: { person?: PersonRow }) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="p-phone">Telefone</Label>
+              <Label htmlFor="p-phone">{t("dialog.phone")}</Label>
               <Input id="p-phone" name="phone" defaultValue={person?.phone ?? ""} />
             </div>
           </div>
-          <SubmitButton pending={pending} className="w-full">Salvar</SubmitButton>
+          <SubmitButton pending={pending} className="w-full">
+            {tCommon("save")}
+          </SubmitButton>
         </form>
       </DialogContent>
     </Dialog>
@@ -294,19 +309,19 @@ function PersonDialog({ person }: { person?: PersonRow }) {
 }
 
 function ImportDialog() {
+  const t = useTranslations("people");
   const router = useRouter();
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(importPeopleAction, {
     onSuccess: (data) => {
       toast.success(
         data?.added
-          ? `${data.added} ${data.added === 1 ? "nome adicionado" : "nomes adicionados"}`
-          : "Nada novo — todos já estavam na lista",
+          ? t("import.added", { count: data.added })
+          : t("import.nothingNew"),
       );
       setOpen(false);
       router.refresh();
     },
-    onError: (message) => toast.error(message),
   });
 
   return (
@@ -314,15 +329,13 @@ function ImportDialog() {
       <DialogTrigger asChild>
         <Button size="sm" variant="outline">
           <ClipboardPaste className="h-4 w-4" />
-          Importar
+          {t("import.trigger")}
         </Button>
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Importar nomes</DialogTitle>
-          <DialogDescription>
-            Cole a lista, um nome por linha. Quem já existe é ignorado.
-          </DialogDescription>
+          <DialogTitle>{t("import.title")}</DialogTitle>
+          <DialogDescription>{t("import.description")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-4">
           <textarea
@@ -330,11 +343,11 @@ function ImportDialog() {
             rows={10}
             required
             className="w-full rounded-md border border-input bg-transparent p-3 text-sm"
-            placeholder={"Sofia Moreira\nLucas Rabelo\nMaria Eduarda Lucena"}
+            placeholder={t("import.placeholder")}
           />
           <SubmitButton pending={pending} className="w-full">
             <UserCheck className="h-4 w-4" />
-            Importar
+            {t("import.trigger")}
           </SubmitButton>
         </form>
       </DialogContent>

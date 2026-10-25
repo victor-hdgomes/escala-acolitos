@@ -18,7 +18,7 @@ export async function createClient() {
             cookieStore.set(name, value, options),
           );
         } catch {
-          // Server Components não podem gravar cookie — o proxy renova.
+          // Server Components cannot write cookies - the proxy refreshes them.
         }
       },
     },

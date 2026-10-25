@@ -1,0 +1,1126 @@
+{
+  "app": {
+    "name": "Altar Roster",
+    "tagline": "Schedule your altar servers without a spreadsheet, and without losing anything in the group chat."
+  },
+  "auth": {
+    "fields": {
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "name": "Your name",
+      "namePlaceholder": "Ana Silva",
+      "password": "Password",
+      "passwordConfirm": "Repeat the password"
+    },
+    "forgotPassword": {
+      "description": "We send you a link to set a new password.",
+      "sent": "If an account exists with that email, the link is already on its way.",
+      "submit": "Send link",
+      "title": "Recover password"
+    },
+    "resetPassword": {
+      "title": "New password"
+    },
+    "signIn": {
+      "description": "An account is only needed to coordinate or to link your own name. To fill in the schedule, use your group's link.",
+      "footer": {
+        "link": "Create account",
+        "prompt": "No account yet?"
+      },
+      "forgotPassword": "Forgot my password",
+      "submit": "Sign in",
+      "title": "Sign in"
+    },
+    "signUp": {
+      "description": "With an account you link your own name, and then nobody marks availability in your place.",
+      "footer": {
+        "link": "Sign in",
+        "prompt": "Already have an account?"
+      },
+      "submit": "Create account",
+      "title": "Create account"
+    }
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "close": "Close",
+    "copied": "Link copied",
+    "copy": "Copy",
+    "copyMessage": "Copy message",
+    "create": "Create",
+    "delete": "Delete",
+    "edit": "Edit",
+    "language": "Language",
+    "loading": "Loading",
+    "new": "New",
+    "optional": "optional",
+    "roles": {
+      "admin": "Administrator",
+      "coordinator": "Coordinator",
+      "member": "Altar server"
+    },
+    "save": "Save",
+    "search": "Search",
+    "share": "Share",
+    "shareOnWhatsApp": "Send on WhatsApp",
+    "today": "today",
+    "you": "you"
+  },
+  "emails": {
+    "invite": {
+      "body": "Your access will be {role}.",
+      "cta": "Accept invitation",
+      "expiry": "{days, plural, one {The invitation is valid for # day.} other {The invitation is valid for # days.}}",
+      "heading": "You have been invited to {parish}",
+      "subject": "Invitation to {parish}"
+    },
+    "layout": {
+      "footer": "Altar Servers Ministry · automated message"
+    },
+    "massList": {
+      "empty": "No celebrations.",
+      "locationWithLabel": "{location} ({label})"
+    },
+    "reminder": {
+      "cta": "See the schedule",
+      "heading": "{person}, a reminder about your Mass tomorrow",
+      "subject": "You are serving tomorrow"
+    },
+    "schedulePublished": {
+      "cta": "See the full schedule",
+      "footer": "If you cannot make a date, ask for a swap through the link itself.",
+      "heading": "Hello, {person}! The {month} schedule is out.",
+      "intro": "You are scheduled for:",
+      "subject": "Your Masses for {month}"
+    },
+    "swapFilled": {
+      "body": "{filledBy} took your slot on {when}, at {location}.",
+      "heading": "{person}, it is sorted",
+      "subject": "Your swap has been taken"
+    },
+    "swapOpened": {
+      "body": "{requester} will not be able to serve {when}, at {location}.",
+      "cta": "Take this slot",
+      "heading": "{person}, someone needs a substitute",
+      "question": "You marked availability for that time. Can you take it?",
+      "reason": "Reason: {reason}",
+      "subject": "{requester} needs a substitute"
+    },
+    "when": "{weekday}, {date} at {time}"
+  },
+  "errors": {
+    "ACCOUNT_ALREADY_MEMBER": "This account is already in the group.",
+    "ACCOUNT_NOT_FOUND": "No account matches that. Check the code or the address.",
+    "ALREADY_IN_A_GROUP": "Your account already belongs to a group. To open another one, talk to whoever runs this system.",
+    "ALREADY_IN_CELEBRATION": "You're already serving at this celebration.",
+    "ASSIGN_FAILED": "We couldn't assign that person.",
+    "AUTH_FAILED": "That didn't work. Please try again.",
+    "AUTOFILL_FAILED": "We couldn't fill those slots.",
+    "AVAILABILITY_SAVE_FAILED": "We couldn't save your answer.",
+    "CLAIM_SLOT_FAILED": "We couldn't give you that slot.",
+    "COORDINATOR_ASSIGNS_THIS": "The coordinator assigns this celebration.",
+    "DISPLAY_NAME_REQUIRED": "Tell us your name.",
+    "EMAIL_ALREADY_REGISTERED": "An account with that email already exists.",
+    "EMAIL_NOT_CONFIRMED": "Confirm your email before signing in.",
+    "EVENT_DELETE_FAILED": "We couldn't delete that celebration.",
+    "EVENT_DUPLICATE": "There's already a celebration at that place and time.",
+    "EVENT_INVALID_DATE": "That date isn't valid.",
+    "EVENT_INVALID_TIME": "That time isn't valid.",
+    "EVENT_LOCATION_REQUIRED": "Choose where it's celebrated.",
+    "EVENT_NOT_FOUND": "We couldn't find that celebration.",
+    "EVENT_SAVE_FAILED": "We couldn't save that celebration.",
+    "FILL_CLOSED_DEADLINE": "The deadline for this schedule has passed.",
+    "FILL_CLOSED_STATUS": "This schedule isn't open for responses.",
+    "FORBIDDEN": "You don't have permission to do that.",
+    "GROUP_CREATE_FAILED": "We couldn't create the group. Please try again.",
+    "GROUP_NAME_TOO_SHORT": "Give your parish or chapel a name.",
+    "GROUP_SAVE_FAILED": "We couldn't save the changes.",
+    "IMPORT_EMPTY": "Paste at least one name.",
+    "IMPORT_FAILED": "We couldn't import those names.",
+    "IMPORT_TOO_MANY": "Up to {max} names at a time.",
+    "INVALID_COLOR": "That colour isn't valid.",
+    "INVALID_CREDENTIALS": "Wrong email or password.",
+    "INVALID_EMAIL": "That email address doesn't look right.",
+    "INVALID_LINK": "This link isn't valid.",
+    "INVALID_REQUEST": "Something in that form wasn't right.",
+    "INVALID_ROLE": "That role doesn't exist.",
+    "INVITE_ALREADY_USED": "That invitation has already been used.",
+    "INVITE_CREATE_FAILED": "We couldn't create the invitation.",
+    "INVITE_EXPIRED": "That invitation has expired.",
+    "INVITE_NOT_FOUND": "We couldn't find that invitation.",
+    "INVITE_REVOKE_FAILED": "We couldn't revoke that invitation.",
+    "JOIN_CODE_REQUIRED": "Type a code or an e-mail address.",
+    "JOIN_FAILED": "We couldn't add you to the group.",
+    "JOIN_LINK_CREATE_FAILED": "We could not create the link. Try again.",
+    "JOIN_LINK_EXHAUSTED": "This link has been used as many times as it allows.",
+    "JOIN_LINK_EXPIRED": "This link has expired.",
+    "JOIN_LINK_INACTIVE": "This link is paused.",
+    "JOIN_LINK_NOT_FOUND": "We could not find this link.",
+    "JOIN_LINK_SAVE_FAILED": "We could not save the change to the link.",
+    "LAST_ADMIN": "The group needs at least one administrator.",
+    "LOCATION_DELETE_FAILED": "We couldn't delete that place.",
+    "LOCATION_DUPLICATE": "There's already a place with that name.",
+    "LOCATION_IN_USE": "This place already appears in a schedule. Deactivate it instead of deleting it.",
+    "LOCATION_NAME_TOO_SHORT": "Give the place a name.",
+    "LOCATION_SAVE_FAILED": "We couldn't save that place.",
+    "MEMBER_REMOVE_FAILED": "We couldn't remove that member.",
+    "NAME_LOCKED_TO_ACCOUNT": "That name is linked to an account. Sign in with it to continue.",
+    "NOT_AUTHENTICATED": "Please sign in first.",
+    "NOT_A_MEMBER": "You're not part of that group.",
+    "NOVENA_CREATE_FAILED": "We couldn't create the novena.",
+    "NOVENA_DAYS_TAKEN": "Some of those days already have a celebration at that place and time.",
+    "NOVENA_TITLE_REQUIRED": "Give the novena a name.",
+    "NO_VALID_CELEBRATION": "No valid celebration was selected.",
+    "PASSWORDS_DO_NOT_MATCH": "The two passwords don't match.",
+    "PASSWORD_TOO_SHORT": "Your password needs at least 6 characters.",
+    "PERSON_ALREADY_CLAIMED": "That name is already linked to another account.",
+    "PERSON_CLAIM_FAILED": "We couldn't link that name to your account.",
+    "PERSON_DELETE_FAILED": "We couldn't remove that person.",
+    "PERSON_DUPLICATE": "Someone with that name is already on the list.",
+    "PERSON_NAME_REQUIRED": "Type the person's full name.",
+    "PERSON_NOT_FOUND": "We couldn't find that name in this group.",
+    "PERSON_SAVE_FAILED": "We couldn't save that person.",
+    "PERSON_UNLINK_FAILED": "We couldn't unlink that account.",
+    "RATE_LIMITED": "Too many attempts. Wait a minute and try again.",
+    "RELEASE_SLOT_FAILED": "We couldn't release that slot.",
+    "ROLE_CHANGE_FAILED": "We couldn't change that role.",
+    "SCHEDULE_CREATE_FAILED": "We couldn't create the schedule.",
+    "SCHEDULE_DELETE_FAILED": "We couldn't delete the schedule.",
+    "SCHEDULE_MONTH_REQUIRED": "Choose a month.",
+    "SCHEDULE_NOT_FOUND": "We couldn't find that schedule.",
+    "SCHEDULE_OTHER_GROUP": "That schedule belongs to another group.",
+    "SCHEDULE_PUBLISH_FAILED": "We couldn't publish the schedule.",
+    "SCHEDULE_SAVE_FAILED": "We couldn't save the schedule.",
+    "SCHEDULE_STATUS_FAILED": "We couldn't change the status.",
+    "SCHEDULE_TITLE_TOO_SHORT": "Give the schedule a title.",
+    "SESSION_EXPIRED": "Your session expired. Please sign in again.",
+    "SLOT_DOES_NOT_EXIST": "That slot doesn't exist.",
+    "SLOT_TAKEN": "Someone just took that slot.",
+    "SWAP_ACCEPT_FAILED": "We couldn't give you that slot.",
+    "SWAP_ALREADY_FILLED": "Someone already took this slot.",
+    "SWAP_CANCELLED": "This request was cancelled.",
+    "SWAP_IN_THE_PAST": "That celebration has already happened.",
+    "SWAP_NOT_FOUND": "We couldn't find that request.",
+    "SWAP_NOT_OPEN": "This request isn't open.",
+    "SWAP_ONLY_OWN_MASS": "You can only ask for cover on your own Mass.",
+    "SWAP_ONLY_OWN_REQUEST": "You can only cancel your own request.",
+    "SWAP_OPEN_FAILED": "We couldn't open the request.",
+    "SWAP_OWN_REQUEST": "That's the name of the person asking for cover.",
+    "TEMPLATE_DELETE_FAILED": "We couldn't remove that Mass.",
+    "TEMPLATE_DUPLICATE": "That Mass is already in your weekly pattern.",
+    "TEMPLATE_INVALID_TIME": "That time isn't valid.",
+    "TEMPLATE_LOCATION_REQUIRED": "Choose where this Mass is celebrated.",
+    "TEMPLATE_SAVE_FAILED": "We couldn't save that Mass.",
+    "UNASSIGN_FAILED": "We couldn't clear that slot.",
+    "UNEXPECTED": "Something went wrong. Please try again."
+  },
+  "fill": {
+    "autosaved": "saved automatically",
+    "batch": {
+      "markAll": "{count, plural, one {Mark # date} other {Mark all # dates}}",
+      "markFiltered": "{count, plural, one {Mark # date} other {Mark the # dates}}",
+      "unmark": "{count, plural, one {Unmark # date} other {Unmark # dates}}"
+    },
+    "chooseNamePrompt": "Pick your name to start.",
+    "closed": {
+      "deadline": "The deadline has closed. Talk to the coordinator.",
+      "deadlineOn": "The deadline closed on {date}. Talk to the coordinator.",
+      "status": "This schedule isn't open for responses."
+    },
+    "deadlineNotice": "Open until <strong>{date}</strong>",
+    "direct": {
+      "badge": "direct",
+      "leave": "leave",
+      "openSlot": "open slot",
+      "take": "take this slot"
+    },
+    "emptyFiltered": "No celebrations match these filters.",
+    "filters": {
+      "clear": "Clear filters",
+      "morning": "Morning",
+      "night": "Night",
+      "novena": "Novena",
+      "saturday": "Saturdays",
+      "sunday": "Sundays",
+      "toggle": "Filters",
+      "weekday": "Weekdays"
+    },
+    "gate": {
+      "codeHelp": "You are signed in, but your account is not in {group} yet. Send this code to whoever organises the schedule.",
+      "description": "{group} has chosen that only its own people answer the schedule.",
+      "pendingCta": "See my options",
+      "signInCta": "I already have an account",
+      "signUpCta": "Create an account",
+      "title": "Only for the group"
+    },
+    "markedCount": "<strong>{count}</strong> {count, plural, one {date marked} other {dates marked}}",
+    "metaTitle": "Fill in the schedule",
+    "personButton": {
+      "change": "change",
+      "empty": "Pick your name"
+    },
+    "personPicker": {
+      "description": "Select it to mark your dates.",
+      "emptyState": "No name found. Ask the coordinator to add you.",
+      "lockedAria": "Linked to an account",
+      "lockedNote": "A name with a padlock is linked to an account: only its owner can mark.",
+      "title": "What's your name?"
+    },
+    "toast": {
+      "marked": "{count, plural, one {# date marked} other {# dates marked}}",
+      "slotReleased": "Slot released",
+      "slotTaken": "Slot confirmed",
+      "unmarked": "Dates unmarked"
+    }
+  },
+  "group": {
+    "addMember": {
+      "add": "Add to the group",
+      "added": "{name} is in the group",
+      "alreadyLinked": "This account already has a name on the list.",
+      "alreadyMember": "This account is already in the group.",
+      "description": "Someone who signed up alone sees a code on their screen. Type it here and add them to the group.",
+      "find": "Find",
+      "noEmail": "No e-mail address",
+      "personHelp": "Linking the account to a name is what lets them mark their own dates and ask for cover.",
+      "personLabel": "Name on the altar servers list",
+      "personNamePlaceholder": "Full name",
+      "personNew": "Add a new name",
+      "queryLabel": "Code or e-mail address",
+      "queryPlaceholder": "K7P4-R2MQ",
+      "roleLabel": "Role in the group",
+      "title": "Add someone by code"
+    },
+    "general": {
+      "accessLabel": "Who can answer the schedule",
+      "accessMembers": "Only people in this group",
+      "accessMembersHelp": "Answering needs an account that belongs to this group. Someone who signs up alone waits until you add them.",
+      "accessOpen": "Anyone with the link",
+      "accessOpenHelp": "No account needed: whoever opens the link picks their name and marks their dates. Easiest to get started with.",
+      "description": "The time zone sets the time everyone sees, including whoever opens the link from another state.",
+      "nameLabel": "Name",
+      "saved": "Group updated",
+      "slugLabel": "Identifier",
+      "timeZoneLabel": "Time zone",
+      "title": "Group details"
+    },
+    "joinLinks": {
+      "create": "Create link",
+      "created": "Link created and copied",
+      "description": "One link, posted once in the group chat. Everyone who signs up through it lands inside the group.",
+      "exhausted": "Full",
+      "expired": "Expired",
+      "expiryField": "Expires in (days)",
+      "expiryPlaceholder": "Never",
+      "labelField": "Name it",
+      "labelPlaceholder": "Altar servers 2026",
+      "maxUsesField": "Limit of people",
+      "maxUsesPlaceholder": "No limit",
+      "pause": "Pause this link",
+      "paused": "Paused",
+      "resume": "Reactivate this link",
+      "roleField": "They join as",
+      "title": "Join links",
+      "untitled": "Join link",
+      "usedCapped": "{used} of {max} used",
+      "usedUnlimited": "{used, plural, =0 {Not used yet} one {# person joined} other {# people joined}}"
+    },
+    "locations": {
+      "activeToggle": "Active",
+      "add": "New",
+      "delete": "Delete {name}",
+      "dialog": {
+        "colorLabel": "Colour",
+        "createTitle": "New place",
+        "description": "The name shows on the schedule; the short name is used where space runs out.",
+        "editTitle": "Edit place",
+        "nameLabel": "Name",
+        "namePlaceholder": "Saint Mary Parish Church",
+        "shortNameLabel": "Short name",
+        "shortNamePlaceholder": "Main church",
+        "sortOrderLabel": "Order"
+      },
+      "edit": "Edit {name}",
+      "emptyState": "No places yet. Start with the main church.",
+      "inactive": "inactive",
+      "title": "Places ({count})"
+    },
+    "members": {
+      "invite": {
+        "created": "Invitation created. Link copied.",
+        "description": "Creates a link to join. Fill in an email and the invitation is sent as well.",
+        "emailLabel": "Email (optional)",
+        "emailPlaceholder": "person@example.com",
+        "personHelp": "On accepting, the account is already tied to that name on the schedule.",
+        "personLabel": "Link to an altar server (optional)",
+        "personPlaceholder": "None",
+        "roleLabel": "Role",
+        "submit": "Create invitation",
+        "title": "Invite"
+      },
+      "list": {
+        "noEmail": "no email",
+        "remove": "Remove {name}",
+        "removed": "{name} left the group",
+        "roleUpdated": "Role updated",
+        "title": "Members ({count})"
+      },
+      "pending": {
+        "expired": "expired",
+        "openLink": "Open link",
+        "revoke": "Revoke invitation",
+        "title": "Pending invitations ({count})"
+      }
+    },
+    "roleFieldLabel": "Role",
+    "roleHelp": {
+      "admin": "Does everything: group, members, places, weekly pattern and schedules.",
+      "coordinator": "Creates and fills schedules. Doesn't touch the group's settings.",
+      "member": "Sees their own schedule and asks for cover."
+    },
+    "roles": {
+      "admin": "Administrator",
+      "coordinator": "Coordinator",
+      "member": "Altar server"
+    },
+    "subtitle": "Who runs it, where it celebrates, and what the week looks like.",
+    "tabs": {
+      "general": "General",
+      "locations": "Places",
+      "members": "Members",
+      "templates": "Weekly pattern"
+    },
+    "templates": {
+      "add": "New",
+      "delete": "Remove from the pattern",
+      "description": "This is where a whole month comes from when you create a schedule.",
+      "dialog": {
+        "createTitle": "New regular Mass",
+        "editTitle": "Edit regular Mass",
+        "locationLabel": "Place",
+        "noteLabel": "Note (optional)",
+        "notePlaceholder": "Children's Mass",
+        "slotsLabel": "Slots",
+        "timeLabel": "Time",
+        "weekdayLabel": "Day"
+      },
+      "edit": "Edit Mass in the pattern",
+      "emptyState": "Nothing here yet. Add the week's regular Masses.",
+      "slots": "{count, plural, one {# slot} other {# slots}}",
+      "title": "Weekly pattern"
+    },
+    "title": "Group"
+  },
+  "home": {
+    "claimName": {
+      "choose": "Choose my name",
+      "description": "Once it's linked, only you mark availability under that name, and you start getting the email notices.",
+      "linked": "Name linked",
+      "notFound": "Can't find your name? Ask the coordination team to add it.",
+      "submit": "Link",
+      "title": "Link my name"
+    },
+    "emptyState": "You're not scheduled for any published Mass.",
+    "greeting": "Hello, {name}",
+    "management": {
+      "deadline": "Due {date}",
+      "emptyState": "No schedule created yet.",
+      "lastSchedule": "Latest schedule: {month}",
+      "noDeadline": "No deadline set",
+      "people": "Altar servers",
+      "schedules": "Schedules",
+      "stats": "Statistics",
+      "title": "Coordination"
+    },
+    "nextMass": {
+      "placeWithLabel": "{place} · {label}",
+      "seeAll": "See all my Masses",
+      "title": "Your next Mass",
+      "when": "{weekday}, {date} at {time}"
+    },
+    "swaps": {
+      "description": "Someone in the group can't make it. Can you step in?",
+      "relativeOwn": "{relative} · your request",
+      "title": "Cover needed",
+      "when": "{weekday} · {time} · {place}"
+    },
+    "title": "Home"
+  },
+  "invite": {
+    "accept": "Accept invitation",
+    "accepted": "All set! You're in the group.",
+    "invitedAs": "You've been invited as <b>{role}</b>.",
+    "invitedAsWithPerson": "You've been invited as <b>{role}</b>, linked to the name <b>{name}</b>.",
+    "signInCta": "I already have an account",
+    "signUpCta": "Create an account and accept",
+    "title": "Invitation",
+    "unavailable": {
+      "action": "Go to sign in",
+      "description": "This invitation has already been used, or it has expired. Ask whoever runs the group for a new one.",
+      "title": "Invitation unavailable"
+    }
+  },
+  "join": {
+    "action": "Join this group",
+    "invitedAs": "You are joining as <b>{role}</b>.",
+    "joined": "You are in",
+    "signInCta": "I already have an account",
+    "signUpCta": "Create an account and join",
+    "title": "Join the group",
+    "unavailable": {
+      "action": "Go to sign in",
+      "exhausted": "This link has been used as many times as it allows.",
+      "expired": "This link has expired. Ask for a new one.",
+      "inactive": "Whoever runs the group has paused this link.",
+      "notFound": "We could not find this link. Check it with whoever sent it.",
+      "title": "This link does not work"
+    }
+  },
+  "landing": {
+    "advantages": {
+      "items": [
+        {
+          "title": "Which Masses are short.",
+          "body": "An empty place stays coral until someone is in it. You see the holes in the month before the month arrives."
+        },
+        {
+          "title": "Who is owed a turn.",
+          "body": "The same three people always say yes, so the same three people always serve. Here the list starts with whoever has served least."
+        },
+        {
+          "title": "Who quietly stopped coming.",
+          "body": "A server who has not answered in three months does not look like a problem in a spreadsheet. In here, he does."
+        },
+        {
+          "title": "Nobody in two places at once.",
+          "body": "Someone already in that Mass is not offered to you at all. Someone serving elsewhere that day, including at the novena running beside it, is flagged before you put their name down."
+        }
+      ],
+      "title": "Four things a spreadsheet was never going to tell you."
+    },
+    "assemblyPreview": {
+      "caption": "Example. Your own names and numbers appear here.",
+      "filled": [
+        "Ana Marques",
+        "João Pedro",
+        "Lucas Carvalho"
+      ],
+      "header": "Sunday 7:00 · Main Church · 4 servers",
+      "openSlot": "Open",
+      "suggestedLabel": "Suggested, in order",
+      "suggestions": [
+        {
+          "name": "Beatriz Lima",
+          "reason": "no Masses this month"
+        },
+        {
+          "name": "Rafael Souza",
+          "reason": "1 Mass · also at 19:30",
+          "conflict": true
+        },
+        {
+          "name": "Marina Alves",
+          "reason": "has not served for 38 days"
+        }
+      ]
+    },
+    "counters": {
+      "body": "While people are still answering, you see three numbers: how many have replied, how many have not, and how many Masses do not yet have enough servers.",
+      "caption": "Example from one month. Your own numbers appear here.",
+      "followUp": "Tap the last one and you get the list. Saturday, 7 p.m., the chapel: three servers needed, one available. So you write to the eight people who are missing instead of to all fifty-four, and you do it on Tuesday instead of on Saturday night.",
+      "pendingLabel": "Not yet",
+      "pendingValue": "32",
+      "repliedLabel": "Replied",
+      "repliedValue": "22",
+      "shortLabel": "Masses short",
+      "shortValue": "5",
+      "title": "What the form never told you"
+    },
+    "cta": {
+      "openApp": "Open my schedules",
+      "primary": "Set up your parish",
+      "signIn": "Sign in"
+    },
+    "faq": {
+      "items": [
+        {
+          "q": "Does anyone have to download anything?",
+          "a": "No. Everything happens in the phone's browser, through the link you send to the group."
+        },
+        {
+          "q": "What about a server who has no smartphone?",
+          "a": "Put them in yourself. When you are assembling, the list shows everybody, not only the people who answered."
+        },
+        {
+          "q": "We have more than one chapel. Does that work?",
+          "a": "Yes. Chapels are part of your weekly pattern, and every Mass carries its own."
+        },
+        {
+          "q": "Can two of us coordinate together?",
+          "a": "Yes. Invite the other coordinator and you work on the same schedules."
+        },
+        {
+          "q": "Our novena begins next week. Can I use it only for that?",
+          "a": "Yes. A novena can have its own schedule, its own link and its own closing date, with no monthly schedule at all."
+        },
+        {
+          "q": "I was already invited to a parish. Can I still open my own?",
+          "a": "An account belongs to one parish. If you were invited to one and need another, ask whoever administers the system."
+        }
+      ],
+      "title": "Questions"
+    },
+    "final": {
+      "body": "Create your account, name your parish, and enter the Mass times of a normal week. You can have the link in the parish group the same evening.",
+      "passItOn": "If this is useful, send this page to the coordinator at the parish next door. That is how it got to you.",
+      "reassurance": "You do not have to move the whole ministry at once. Try it for one month and see how many people answer.",
+      "title": "Start with one month."
+    },
+    "footer": {
+      "line": "Altar Roster. For parish altar server ministries, under the patronage of Saint Tarcisius."
+    },
+    "hero": {
+      "eyebrow": "From one coordinator to another",
+      "headline": "Send one link to the group. Your altar servers answer from their phones.",
+      "serverAside": "Are you an altar server who was sent a link? You don't need an account here. Open the link your coordinator sent you: it goes straight to your Masses.",
+      "subheadline": "Scheduling for parish altar server ministries. Set your weekly Mass times once, open the month, and send a single link to the parish group. Your servers mark the Masses they can serve. No account, no password, nothing to install.",
+      "support": "Your chapels and the Mass times of a normal week are entered once. Every month after that is generated from them."
+    },
+    "noAccount": {
+      "body": "No sign-up, no password, nothing to install, nothing to download. They open the link, find their name, tap their Masses, and put the phone away. It works on an old phone and on a weak connection.",
+      "claim": "Anyone who wants an account later, so that only they can answer for their own name, can claim it. Nobody has to.",
+      "privacy": "The links you send carry names and Mass times, and nothing else: no member list, no telephone numbers, no e-mail addresses. Your parish sees only your parish.",
+      "title": "Your servers never create an account"
+    },
+    "novena": {
+      "body": "Nine evenings, places numbered one to six, and the servers claim them directly, exactly like the numbered list someone types into the group every year, except a place cannot be claimed twice.",
+      "scope": "A novena can live inside the month's schedule or stand on its own, with its own link and its own closing date. If someone is already serving at the same hour on the parish schedule, you are told before you publish.",
+      "title": "Novenas, the way your group already does them"
+    },
+    "productName": "Altar Roster",
+    "recognition": {
+      "closing": "None of that is the ministry. It is the part standing between you and the ministry.",
+      "items": [
+        "You build the form again, because last month's dates are wrong.",
+        "Twenty-two people answer. There are fifty-four names on your list, and the form does not tell you which thirty-two are missing.",
+        "You copy the answers into the spreadsheet and sort them by hand, trying to remember who served last Sunday and who has not served since Easter.",
+        "You take a screenshot of the table and send the picture to the group. Somebody asks which Mass is theirs.",
+        "Then, on Saturday night: “I'm so sorry, I can't serve tomorrow.” It sinks under two hundred other messages, and you find out at the sacristy door on Sunday morning."
+      ],
+      "title": "You already know this part."
+    },
+    "stats": {
+      "body": "At the end of the month you can see it plainly: the three who served every single week, the ones who have served once since Easter, and the ones who have not answered a form in two months.",
+      "closing": "It is not a ranking. It is how you notice the boy who quietly stopped coming, before a whole season has gone by.",
+      "title": "Who serves most. Who serves least. Who stopped coming."
+    },
+    "steps": {
+      "items": [
+        {
+          "title": "Set it up once.",
+          "body": "Your chapels, the Mass times of a normal week, and how many servers each Mass needs. You will not type a date again."
+        },
+        {
+          "title": "Open the month.",
+          "body": "Every Mass appears, generated from that normal week. You adjust what is different this time: a feast, a funeral, the week the church is closed."
+        },
+        {
+          "title": "Send one link to the group.",
+          "body": "Your servers open it, find their name, and filter to Sundays and mornings, and one tap marks all twelve dates at once. Then they are finished."
+        },
+        {
+          "title": "Build the schedule, slot by slot.",
+          "body": "For each place you see who is available, who has served fewest times this month, and who is already serving somewhere else that day. You choose every name. The app never assigns anyone on its own."
+        },
+        {
+          "title": "Publish.",
+          "body": "A read-only link goes back to the group: the finished schedule, on a phone, always current. No more screenshots that go out of date the moment something changes."
+        }
+      ],
+      "title": "How a month goes now"
+    },
+    "swap": {
+      "body": "It happens, and it is not a failure. The server opens their own Mass and asks for a replacement. That becomes a link you send to the group. The first person who taps it takes the place, the schedule updates itself, and the published link is already correct.",
+      "closing": "No message repeated three times, nobody waiting for an answer, and never two people showing up for the same slot.",
+      "title": "“I can't make it on Sunday.”"
+    },
+    "tarcisius": {
+      "closing": "That is all this is for.",
+      "figureAlt": "Saint Tarcisius, holding the Eucharist against his chest",
+      "story": "Rome, the third century. Tradition remembers a boy of about twelve who was trusted to carry the Eucharist across the city to Christians held in prison. He was stopped on the road and ordered to hand it over. He refused, and was killed still holding it. He was buried in the catacomb of Saint Callixtus, and the Church gave him to altar servers and to first communicants as their patron.",
+      "title": "Under the patronage of Saint Tarcisius",
+      "today": "Nothing of the sort is asked of the children in your sacristy. Only that they serve, and that somebody keeps track of who, carefully, and without anyone being forgotten."
+    },
+    "turn": "Here is the same month, done a different way."
+  },
+  "myMasses": {
+    "claimPrompt": "Link your name to see where you're scheduled.",
+    "list": {
+      "cancelRequest": "Cancel request",
+      "cantMakeIt": "I can't make it",
+      "copyLink": "Copy request link",
+      "emptyState": "No published Mass coming up. When next month's schedule goes out, it shows up here.",
+      "whenWithLabel": "{when} · {label}"
+    },
+    "subtitle": "{name} · {count, plural, one {# Mass coming up} other {# Masses coming up}}",
+    "swapDialog": {
+      "copyLinkLabel": "Copy link",
+      "notice": "Everyone who marked availability for that time gets a notice.",
+      "opened": "Request is open. Whoever clicks first takes the slot.",
+      "reasonPlaceholder": "Reason (optional)",
+      "submit": "Open request",
+      "title": "Ask for cover"
+    },
+    "title": "My Masses",
+    "toast": {
+      "requestCancelled": "Request cancelled"
+    },
+    "whatsApp": {
+      "callToAction": "If you can step in, just open it and confirm:",
+      "header": "🔄 *I need cover*",
+      "reason": "Reason: {reason}"
+    },
+    "whenAt": "{date} at {time}",
+    "whenLabel": "{weekday}, {date}"
+  },
+  "nav": {
+    "group": "Group",
+    "home": "Home",
+    "menu": "Menu",
+    "more": "More",
+    "myMasses": "My Masses",
+    "people": "Altar servers",
+    "schedules": "Schedules",
+    "stats": "Stats"
+  },
+  "newGroup": {
+    "back": "Back",
+    "form": {
+      "description": "A group is a parish or a ministry: it has its own list of altar servers, places and schedules. You join as its administrator.",
+      "nameLabel": "Group name",
+      "namePlaceholder": "Saint Mary Parish, Riverside",
+      "submit": "Create group",
+      "timeZoneLabel": "Time zone",
+      "title": "New group"
+    },
+    "headingAnother": "Create another group",
+    "headingFirst": "Create your group",
+    "title": "New group"
+  },
+  "pending": {
+    "code": {
+      "description": "Send this to whoever organises the schedule at your parish. They type it in and add you.",
+      "signedInAs": "Signed in as {email}",
+      "title": "Your code"
+    },
+    "create": {
+      "action": "Create a group",
+      "description": "Open your own group, add the altar servers and build the first schedule.",
+      "title": "Organising it yourself?"
+    },
+    "description": "It is not part of any group yet. Either paste the link your coordinator sent you, or hand them the code below so they can add you.",
+    "heading": "Your account is ready",
+    "joined": "You are in",
+    "link": {
+      "action": "Join",
+      "description": "Paste the group link you were sent and you are in straight away.",
+      "label": "Group link",
+      "placeholder": "Paste the link or code here",
+      "title": "Got a link?"
+    },
+    "signOut": "Sign out",
+    "title": "Waiting to be added"
+  },
+  "people": {
+    "count": "{count, plural, one {# person} other {# people}}",
+    "dialog": {
+      "createTitle": "New altar server",
+      "description": "The email here is for notices. Linking an account is a different thing: the person links it themselves, or through a named invitation.",
+      "editAria": "Edit {name}",
+      "editTitle": "Edit altar server",
+      "email": "Email",
+      "fullName": "Full name",
+      "phone": "Phone",
+      "shortName": "How it shows on the schedule"
+    },
+    "emptyState": "Nobody found.",
+    "import": {
+      "added": "{count, plural, one {# name added} other {# names added}}",
+      "description": "Paste the list, one name per line. Anyone already there is skipped.",
+      "nothingNew": "Nothing new: everyone was already on the list",
+      "placeholder": "Ana Silva\nPeter Lane\nMary Carter",
+      "title": "Import names",
+      "trigger": "Import"
+    },
+    "metaTitle": "Altar servers",
+    "onlyInactive": "Inactive only",
+    "row": {
+      "activeToggle": "Active",
+      "delete": "Delete {name}",
+      "inactive": "inactive",
+      "linkedAccount": "Linked account",
+      "linkedAccountUnknown": "linked account",
+      "noAccount": "no linked account",
+      "unlink": "Unlink account",
+      "unlinked": "Account unlinked"
+    },
+    "searchPlaceholder": "Search by name",
+    "summary": "{total} in the group · {linked} with a linked account",
+    "title": "Altar servers"
+  },
+  "published": {
+    "emptyState": "This schedule has no celebrations.",
+    "emptyStateMine": "You're not serving this month.",
+    "eventEmptyState": "No altar servers assigned",
+    "identifyAction": "Mark my name",
+    "onlyMineToggle": "Only mine ({count})",
+    "swapDialog": {
+      "copyLink": "Copy link",
+      "notice": "Everyone who marked availability for that time gets an email.",
+      "openedState": "Request open. Send the link to the group: whoever clicks first takes the slot.",
+      "reasonPlaceholder": "Reason (optional)",
+      "shareCall": "If you can take it, just open the link and confirm:",
+      "shareDetails": "{time} · {location} ({month})",
+      "shareHeading": "🔄 *I need someone to cover*",
+      "shareReason": "Reason: {reason}",
+      "submitAction": "Open request",
+      "title": "Ask for cover",
+      "whenLabel": "{time} · {location}"
+    },
+    "swapOpenLink": "needs cover",
+    "swapRequestAction": "I can't make it",
+    "title": "Schedule"
+  },
+  "schedules": {
+    "assembly": {
+      "allAvailableAssigned": "Everyone who marked availability is already in this celebration. Turn on the option above to assign someone from the group anyway.",
+      "allFilled": "All filled. 🎉",
+      "autoFillResult": "{count, plural, =0 {Nobody available for the open slots} one {# slot filled} other {# slots filled}}",
+      "availableTooltip": "Who marked themselves available",
+      "clearSlot": "Take out of the slot",
+      "emptyState": "No celebrations in this schedule.",
+      "noMatches": "No name found.",
+      "noneAvailable": "Nobody marked availability. Turn on the option above to see everyone.",
+      "onlyIncomplete": "Only celebrations with an open slot",
+      "openSlot": "open slot",
+      "pickerHint": "Sorted by who is short on turns. The choice is yours.",
+      "searchPlaceholder": "Search a name",
+      "shortOnCandidates": "Fewer candidates than slots",
+      "showAll": "Show who did not mark availability",
+      "slotTitle": "{location} · slot {position}",
+      "suggestFill": "{count, plural, one {Suggest for the open slot} other {Suggest for the # open slots}}",
+      "tookSlotTooltip": "Who already took a slot"
+    },
+    "assignmentCount": "{count, plural, one {# assignment} other {# assignments}}",
+    "badges": {
+      "direct": "direct",
+      "novena": "novena",
+      "special": "special",
+      "swap": "swap",
+      "unavailable": "out"
+    },
+    "celebrationCount": "{count, plural, one {# celebration} other {# celebrations}}",
+    "detail": {
+      "closeResponses": "Close responses",
+      "publish": "Publish",
+      "published": "{count, plural, =0 {Schedule published.} one {Schedule published. # person notified by email.} other {Schedule published. # people notified by email.}}",
+      "reopenResponses": "Reopen responses",
+      "slotsFilled": "{filled} of {total} slots filled",
+      "tabAssembly": "Assembly",
+      "tabEvents": "Celebrations",
+      "tabResponses": "Responses",
+      "tabShare": "Share",
+      "title": "Schedule",
+      "unpublish": "Unpublish"
+    },
+    "events": {
+      "add": "Celebration",
+      "delete": "Delete celebration",
+      "dialogDescription": "Use “direct” when the altar server takes the slot themselves, as in a novena.",
+      "edit": "Edit celebration",
+      "editTitle": "Edit celebration",
+      "emptyState": "No celebrations. Add one, or generate them from the pattern by creating another schedule.",
+      "kindMass": "Mass",
+      "kindNovena": "Novena",
+      "kindSpecial": "Special celebration",
+      "labelPlaceholder": "Feast of the Holy Cross",
+      "newTitle": "New celebration"
+    },
+    "fields": {
+      "date": "Date",
+      "days": "Days",
+      "deadline": "Deadline",
+      "descriptionOptional": "Description (optional)",
+      "firstDay": "First day",
+      "kind": "Type",
+      "location": "Place",
+      "month": "Month",
+      "name": "Name",
+      "signupMode": "Sign-up",
+      "slots": "Slots",
+      "slotsPerDay": "Slots per day",
+      "time": "Time",
+      "title": "Title"
+    },
+    "linkCopied": "Link copied",
+    "list": {
+      "createSchedule": "Create schedule",
+      "deadlineHint": "After that date the link stops accepting answers.",
+      "deadlineLabel": "Response deadline",
+      "deadlineSummary": "deadline {date}",
+      "emptyHint": "Set up the weekly pattern under <link>Group</link> so the month comes ready.",
+      "emptyState": "No schedules yet.",
+      "generateEmptyHint": "No fixed Mass set up yet",
+      "generateHint": "Creates every fixed Mass of the month",
+      "generateLabel": "Generate celebrations from the pattern",
+      "kindMonthlyHint": "The month's Masses",
+      "kindMonthlyLabel": "Monthly",
+      "kindNovenaHint": "Days in a row",
+      "kindNovenaLabel": "Novena",
+      "newMonthlyDescription": "The month is born with the Masses from the weekly pattern. You adjust it afterwards.",
+      "newNovenaDescription": "A novena has a link and a deadline of its own: it does not have to go into the month's schedule.",
+      "newSchedule": "New schedule",
+      "subtitle": "Create the month's, send the link to the group and follow who answered.",
+      "title": "Schedules"
+    },
+    "messageCopied": "Message copied",
+    "monthlyScheduleTitle": "Monthly Schedule | {month}",
+    "notifications": {
+      "fallbackRequester": "An altar server"
+    },
+    "novena": {
+      "add": "Novena",
+      "create": "Create novena",
+      "created": "Novena created",
+      "dayLabel": "Day {day}",
+      "deadlineOptional": "Deadline (optional)",
+      "dialogDescription": "Creates the run of days in one go, with numbered slots the altar servers take themselves, just like the message in the group chat.",
+      "dialogTitle": "New novena",
+      "fallbackTitle": "Novena",
+      "modeCoordinator": "The coordinator assigns",
+      "modeDirect": "The altar server takes the slot",
+      "namePlaceholder": "Novena in honour of Our Lady of Sorrows",
+      "whoFills": "Who fills it"
+    },
+    "responses": {
+      "allAnswered": "Everyone answered. 🎉",
+      "answeredDescription": "Whoever gave few dates is who limits the assembly most.",
+      "answeredTile": "Answered",
+      "answeredTitle": "Answered ({count})",
+      "atRiskDescription": "Fewer available candidates than slots.",
+      "atRiskTile": "Celebrations at risk",
+      "atRiskTitle": "People are going to be short",
+      "dateCount": "{count, plural, one {# date} other {# dates}}",
+      "noAnswersYet": "Nobody has answered yet. <copy>Copy the link</copy>",
+      "pendingDescription": "Chase them in the group with the message ready to send.",
+      "pendingTile": "Still to answer",
+      "pendingTitle": "Still to answer ({count})",
+      "remind": "Chase",
+      "reminderShareTitle": "Schedule reminder"
+    },
+    "save": "Save",
+    "share": {
+      "copyLink": "Copy link",
+      "copyMessage": "Copy message",
+      "csv": "CSV",
+      "csvFileName": "schedule-{month}.csv",
+      "exportDescription": "To paste in the group or open in the usual spreadsheet.",
+      "exportTitle": "Export",
+      "fillLinkDescription": "This is what goes to the group for people to mark their availability.",
+      "fillLinkDescriptionDirect": "This is what goes to the group for people to take the slots.",
+      "fillLinkTitle": "Sign-up link",
+      "noteLabel": "Note on the form",
+      "notePlaceholder": "Please fill in all your availability so we can organise this.",
+      "novenaAsText": "Novena as text",
+      "novenaCopied": "Novena copied",
+      "novenaShareTitle": "Novena",
+      "previewTitle": "Schedule preview",
+      "scheduleAsText": "Schedule as text",
+      "scheduleCopied": "Schedule copied",
+      "scheduleShareTitle": "Schedule",
+      "scheduleUpdated": "Schedule updated",
+      "sendOnWhatsApp": "Send on WhatsApp",
+      "settingsDescription": "The note shows at the top of the form, before the dates.",
+      "settingsTitle": "Settings",
+      "viewLinkDescription": "Read only. Whoever opens it sees where each person serves.",
+      "viewLinkTitle": "Published schedule link"
+    },
+    "status": {
+      "archived": "archived",
+      "building": "building",
+      "collecting": "collecting",
+      "draft": "draft",
+      "published": "published"
+    }
+  },
+  "shell": {
+    "brand": {
+      "short": "Roster"
+    },
+    "install": {
+      "action": "Install as app",
+      "android": "Tap Install and confirm.",
+      "description": "Add this to your home screen and it opens like any other app, full screen and without the browser bar.",
+      "desktop": "Open your browser menu and choose Install, or use the icon at the end of the address bar.",
+      "dismiss": "Not now",
+      "installed": "Already added to your home screen.",
+      "ios": "Tap the Share button, then Add to Home Screen.",
+      "title": "Keep it one tap away"
+    },
+    "manifest": {
+      "description": "Altar server roster: availability by link, assembling and swaps."
+    },
+    "notFound": {
+      "action": "Back to home",
+      "description": "The link may have expired, the schedule may have been removed, or the address arrived from WhatsApp incomplete.",
+      "title": "We couldn't find that page"
+    },
+    "parishSwitcher": {
+      "createGroup": "Create new group",
+      "label": "{count, plural, one {Your group} other {Your groups}}"
+    },
+    "passwordInput": {
+      "hide": "Hide password",
+      "show": "Show password"
+    },
+    "roles": {
+      "admin": "Administrator",
+      "coordinator": "Coordinator",
+      "member": "Altar server"
+    },
+    "select": {
+      "placeholder": "Select"
+    },
+    "sidebar": {
+      "collapse": "Collapse menu",
+      "expand": "Expand menu"
+    },
+    "signOut": "Sign out",
+    "theme": {
+      "toggle": "Switch theme"
+    },
+    "viewAs": {
+      "label": "View the app as",
+      "trigger": "View as"
+    }
+  },
+  "stats": {
+    "byMonth": {
+      "title": "Assignments per month"
+    },
+    "csv": {
+      "answered": "Dates marked",
+      "daysSinceLast": "Days since last",
+      "fileName": "altar-servers-stats.csv",
+      "name": "Name",
+      "served": "Assignments",
+      "topLocation": "Most frequent place"
+    },
+    "exportCsv": "CSV",
+    "metaTitle": "Statistics",
+    "neverServed": "never served",
+    "roster": {
+      "description": "The bar compares against whoever served most in the period.",
+      "title": "Altar servers ({count})"
+    },
+    "row": {
+      "answered": "{count, plural, one {# date marked} other {# dates marked}}",
+      "lastServed": "{count, plural, one {last one # day ago} other {last one # days ago}}",
+      "topLocation": "mostly at {location}"
+    },
+    "sorts": {
+      "absent": "Who has gone missing",
+      "answered": "Who answers most",
+      "served": "Who serves most"
+    },
+    "summary": "{average} assignments per server on average · {count, plural, one {# has never served} other {# have never served}}",
+    "title": "Statistics"
+  },
+  "swap": {
+    "acceptAction": "I can take it",
+    "acceptedToast": "Slot taken. Thank you!",
+    "closedNote": {
+      "cancelled": "Whoever asked sorted it out.",
+      "filled": "Nothing to do here.",
+      "past": "That date has already passed."
+    },
+    "firstComeNote": "First to confirm keeps the slot.",
+    "heading": {
+      "cancelled": "Request cancelled",
+      "filled": "Slot already taken",
+      "open": "Someone needs cover",
+      "past": "This celebration has passed"
+    },
+    "identifyAction": "Who are you?",
+    "picker": {
+      "descriptionAll": "Anyone in the group can take this slot.",
+      "descriptionCandidates": "People who marked availability for this time.",
+      "emptyState": "No names found.",
+      "title": "Who's taking it?"
+    },
+    "reasonLabel": "Reason: {reason}",
+    "showAllAction": "I can't find my name on the list",
+    "showCandidatesAction": "Show only who marked availability",
+    "subheading": {
+      "filled": "{name} took over from {requester}.",
+      "open": "{requester} can't make it."
+    },
+    "title": "Cover request",
+    "unknownFiller": "Another altar server",
+    "unknownRequester": "An altar server",
+    "whenLabel": "{weekday}, {date} at {time}"
+  },
+  "whatsapp": {
+    "csv": {
+      "date": "DATE",
+      "location": "LOCATION",
+      "locationWithLabel": "{location} ({label})",
+      "server": "ALTAR SERVER",
+      "time": "TIME",
+      "weekday": "WEEKDAY"
+    },
+    "invite": {
+      "deadline": "⏰ Open for responses until {deadline}.",
+      "greeting": "Morning, everyone! 🙏",
+      "howToMonthly": "Just open it, pick your name and mark the dates.",
+      "howToNovena": "Just open it, pick your name and take whichever day you can.",
+      "novenaIncluded": "The novena schedule is on that same link, you can fill it all in together.",
+      "openedMonthly": "The {month} schedule is open. Here is the link so we can get organised without a rush:",
+      "openedNovena": "The schedule for the {title} is open. Here is the link so we can get ourselves organised:"
+    },
+    "novenaText": {
+      "eventLine": "- {when}",
+      "slotLine": "{position}- {name}",
+      "title": "*{title}*"
+    },
+    "published": {
+      "body": "Have a look at where each of you is serving:",
+      "footer": "If you cannot make a date, ask for a swap through the link itself.",
+      "titleMonthly": "✅ *{monthUpper} SCHEDULE* published!",
+      "titleNovena": "✅ *{title}*: schedule published!"
+    },
+    "reminder": {
+      "deadline": "Responses close {deadline}.",
+      "pending": "Still to mark availability: {names}.",
+      "pendingUnknown": "Some people still have not marked their availability.",
+      "title": "⏰ *We are still missing you on the schedule*"
+    },
+    "scheduleText": {
+      "dayHeading": "*{weekday}, {date}*",
+      "eventLine": "• {time} - {location}",
+      "eventLineWithLabel": "• {time} - {location} ({label})",
+      "namesLine": "  {names}",
+      "noNames": "  _no altar servers_",
+      "titleMonthly": "*ALTAR SERVERS MINISTRY - {monthUpper}*",
+      "titleOther": "*{title}*"
+    },
+    "swap": {
+      "body": "{person} will not be able to serve {when}, at {location}.",
+      "callToAction": "If you can take it, just open this and confirm:",
+      "reason": "Reason: {reason}",
+      "title": "🔄 *I need a substitute*"
+    },
+    "when": "{weekday}, {date} at {time}"
+  }
+}

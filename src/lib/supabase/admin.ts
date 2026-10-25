@@ -6,16 +6,16 @@ import type { Database } from "@/lib/db/types";
 import { supabaseUrl } from "@/lib/supabase/env";
 
 /**
- * Cliente com service role — ignora RLS.
+ * Service-role client - bypasses RLS.
  *
- * Existe por um motivo só: o acesso por link público (formulário, escala
- * publicada, substituição) é anônimo, e RLS não sabe validar um token de URL.
- * Toda chamada feita com este cliente DEVE ter validado o token antes, no
- * servidor. Nunca importar isso em componente de client.
+ * It exists for one reason: access through a public link (availability form,
+ * published schedule, swap request) is anonymous, and RLS has no way to
+ * validate a URL token. Every call made with this client MUST have validated
+ * the token first, on the server. Never import this into a client component.
  */
 export function createAdminClient() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY ausente");
+  if (!key) throw new Error("SUPABASE_SERVICE_ROLE_KEY is missing");
 
   return createSupabaseClient<Database>(supabaseUrl(), key, {
     auth: { persistSession: false, autoRefreshToken: false },
