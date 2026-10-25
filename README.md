@@ -48,13 +48,6 @@ generated from `supabase/migrations/`, so it can never fall behind them.
 npm run db:setup          # regenerates supabase/setup.sql from the migrations
 ```
 
-With the Postgres connection string in `SUPABASE_DB_URL` you can apply it from
-the terminal instead:
-
-```bash
-npm run db migrate
-```
-
 In **Authentication, Providers**, leave email and password enabled. To try it
 without an inbox, turn "Confirm email" off.
 
@@ -84,8 +77,7 @@ your group. You join it as its administrator.
 
 If this installation is yours, also run `supabase/grant-admin.sql` with your
 address at the top. That makes you the **superadmin**: the one account that
-sees and administers every group. From the terminal:
-`npm run db grant you@example.com`.
+sees and administers every group.
 
 Want something on the screens before you have a real group?
 `supabase/seed.sql` loads an invented parish with seven places, a weekly
@@ -255,33 +247,12 @@ npm run typecheck       # tsc --noEmit
 npm run lint            # eslint
 npm run check:messages  # catalog parity between locales
 npm run db:setup        # regenerate supabase/setup.sql from the migrations
-
-npm run db status                 # what the database already holds
-npm run db migrate                # apply supabase/migrations/*.sql
-npm run db grant you@example.com  # make that account the superadmin
 ```
 
-To see the app full of data without gathering fifty-four people:
-
-```bash
-node scripts/demo-schedule.mjs 2026-11 --reset   # the month, from the pattern
-node scripts/demo-fill.mjs     2026-11 --reset   # availabilities and assembly
-```
-
-The draw has a fixed seed, so every run produces the same result and two runs
-of a screen are comparable. `--reset` clears what was there. Both use the REST
-API with the service role.
-
-Starting over:
-
-```bash
-node scripts/wipe-schedules.mjs --confirm   # schedules only, setup intact
-node scripts/wipe-all.mjs --confirm         # everything but the accounts
-```
-
-The `db` commands need `SUPABASE_DB_URL` in `.env.local` (Dashboard, Connect,
-Connection string, URI). DDL does not go through the REST API, hence the
-direct connection.
+To look around with something on the screens, paste `supabase/seed.sql` into
+the SQL editor: an invented parish with seven places, a weekly pattern and
+twenty-four fictional names. To start over, delete the group from
+**Group, General** or drop the rows from the dashboard.
 
 ---
 

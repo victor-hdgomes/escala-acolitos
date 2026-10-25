@@ -8,7 +8,6 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "db": "node scripts/db.mjs",
     "check:messages": "node scripts/check-messages.mjs",
     "db:setup": "node scripts/build-setup.mjs"
   },
