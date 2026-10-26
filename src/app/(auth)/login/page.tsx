@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
+import { safeInternalPath } from "@/lib/safe-path";
 import { SignInForm } from "@/components/organisms/auth/auth-forms";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,6 +15,5 @@ export default async function LoginPage({
   searchParams: Promise<{ redirect?: string }>;
 }) {
   const { redirect } = await searchParams;
-  const target = redirect?.startsWith("/") ? redirect : "/home";
-  return <SignInForm redirectTo={target} />;
+  return <SignInForm redirectTo={safeInternalPath(redirect)} />;
 }

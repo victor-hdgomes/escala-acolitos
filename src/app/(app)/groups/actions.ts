@@ -298,6 +298,10 @@ export async function acceptInviteAction(token: string): Promise<ActionResult> {
       .from("people")
       .update({ claimed_by: user.id, claimed_at: new Date().toISOString() })
       .eq("id", invite.person_id)
+      // Scoped to the invitation's own group: person_id is stored on the
+      // invite, so without this an invite forged for another parish's row
+      // would hand that parish's identity away.
+      .eq("parish_id", invite.parish_id)
       .is("claimed_by", null);
   }
 
@@ -424,6 +428,43 @@ export async function setViewAsAction(role: Role | null): Promise<ActionResult> 
 // Joining a group
 // ============================================================
 
+/**
+ * The account behind a join code or a whole e-mail address.
+ *
+ * Both branches match exactly, which is the point. The e-mail branch used to
+ * pass the caller's string to `ilike`, so "%@gmail.com" reached Postgres as a
+ * wildcard and the lookup became a directory of the installation. It runs on
+ * the service role, so the one policy that keeps a profile to its owner does
+ * not apply here: this function is the whole protection.
+ */
+async function resolveAccountByCredential(
+  query: string,
+): Promise<{ id: string; display_name: string | null; email: string | null } | null> {
+  const admin = createAdminClient();
+  const columns = "id, display_name, email";
+  const trimmed = query.trim();
+
+  if (trimmed.includes("@")) {
+    const parsed = z.string().email().safeParse(trimmed);
+    if (!parsed.success) return null;
+    const { data } = await admin
+      .from("profiles")
+      .select(columns)
+      .eq("email", parsed.data.toLowerCase())
+      .maybeSingle();
+    return data ?? null;
+  }
+
+  const code = normalizeJoinCode(trimmed);
+  if (!/^[0-9A-Z]{4}-[0-9A-Z]{4}$/.test(code)) return null;
+  const { data } = await admin
+    .from("profiles")
+    .select(columns)
+    .eq("join_code", code)
+    .maybeSingle();
+  return data ?? null;
+}
+
 export interface FoundAccount {
   userId: string;
   displayName: string;
@@ -451,18 +492,7 @@ export async function findAccountAction(
   if (!trimmed) return fail(ERROR_CODES.JOIN_CODE_REQUIRED);
 
   const admin = createAdminClient();
-  const isEmail = trimmed.includes("@");
-  const { data: profile } = isEmail
-    ? await admin
-        .from("profiles")
-        .select("id, display_name, email")
-        .ilike("email", trimmed)
-        .maybeSingle()
-    : await admin
-        .from("profiles")
-        .select("id, display_name, email")
-        .eq("join_code", normalizeJoinCode(trimmed))
-        .maybeSingle();
+  const profile = await resolveAccountByCredential(trimmed);
   if (!profile) return fail(ERROR_CODES.ACCOUNT_NOT_FOUND);
 
   const [{ data: membership }, { data: person }] = await Promise.all([
@@ -499,7 +529,8 @@ export async function findAccountAction(
  * between them in the app.
  */
 export async function addAccountToGroupAction(input: {
-  userId: string;
+  /** The code or address the person handed over, not an id from the page. */
+  credential: string;
   role: Role;
   /** An existing name on the list to link the account to. */
   personId?: string | null;
@@ -509,16 +540,17 @@ export async function addAccountToGroupAction(input: {
   const ctx = await requireAdmin();
   if (!ROLES.includes(input.role)) return fail(ERROR_CODES.INVALID_ROLE);
 
+  // Resolved again here rather than taken from the page. The id the browser
+  // sends is whatever the caller types, so accepting it would let an admin
+  // add any account in the installation, code or no code: the thing the
+  // person hands over has to be the thing the server checks.
   const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("id")
-    .eq("id", input.userId)
-    .maybeSingle();
+  const profile = await resolveAccountByCredential(input.credential);
   if (!profile) return fail(ERROR_CODES.ACCOUNT_NOT_FOUND);
+  const userId = profile.id;
 
   const { error } = await admin.from("memberships").upsert(
-    { parish_id: ctx.parish.id, user_id: input.userId, role: input.role },
+    { parish_id: ctx.parish.id, user_id: userId, role: input.role },
     { onConflict: "parish_id,user_id" },
   );
   if (error) return fail(ERROR_CODES.JOIN_FAILED);
@@ -527,7 +559,7 @@ export async function addAccountToGroupAction(input: {
     // Only an unclaimed name is taken: whoever got there first keeps it.
     await admin
       .from("people")
-      .update({ claimed_by: input.userId, claimed_at: new Date().toISOString() })
+      .update({ claimed_by: userId, claimed_at: new Date().toISOString() })
       .eq("id", input.personId)
       .eq("parish_id", ctx.parish.id)
       .is("claimed_by", null);
@@ -535,7 +567,7 @@ export async function addAccountToGroupAction(input: {
     await admin.from("people").insert({
       parish_id: ctx.parish.id,
       full_name: input.personName.trim(),
-      claimed_by: input.userId,
+      claimed_by: userId,
       claimed_at: new Date().toISOString(),
     });
   }
@@ -545,7 +577,7 @@ export async function addAccountToGroupAction(input: {
     actorUserId: ctx.userId,
     action: "membership.add",
     entity: "memberships",
-    payload: { userId: input.userId, role: input.role },
+    payload: { userId, role: input.role },
   });
 
   revalidatePath("/group");
@@ -674,20 +706,27 @@ export async function redeemJoinLinkAction(
     .maybeSingle();
 
   if (!existing) {
+    // The seat is taken first, in one statement that re-checks active,
+    // expiry and the cap. Reading the count and writing it back let two
+    // people opening the link at the same moment both pass a cap of one.
+    const { data: claimed } = await admin.rpc("claim_join_link_seat", {
+      p_token: token,
+    });
+    if (!claimed) return fail(ERROR_CODES.JOIN_LINK_EXHAUSTED);
+
     const { error } = await admin.from("memberships").insert({
       parish_id: context.link.parish_id,
       user_id: user.id,
       role: context.link.role,
     });
-    if (error) return fail(ERROR_CODES.JOIN_FAILED);
-
-    // Counted only on a real join, so reopening the link does not burn a seat.
-    // The read-then-write is not atomic; at the scale of a parish group the
-    // worst case is one extra seat on a capped link, which beats an RPC.
-    await admin
-      .from("join_links")
-      .update({ uses: context.link.uses + 1 })
-      .eq("id", context.link.id);
+    if (error) {
+      // Give the seat back rather than losing it to a failed insert.
+      await admin
+        .from("join_links")
+        .update({ uses: context.link.uses })
+        .eq("id", context.link.id);
+      return fail(ERROR_CODES.JOIN_FAILED);
+    }
 
     await logAudit({
       parishId: context.link.parish_id,

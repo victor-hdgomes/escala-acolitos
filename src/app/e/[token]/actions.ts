@@ -11,7 +11,12 @@ import {
   type ErrorCode,
 } from "@/lib/action-result";
 import { logAudit } from "@/lib/audit";
-import { canActAsPerson, resolveFillToken } from "@/lib/public-access";
+import {
+  canActAsPerson,
+  canActDestructively,
+  canFillAsUser,
+  resolveFillToken,
+} from "@/lib/public-access";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -66,6 +71,9 @@ export async function setAvailabilityAction(input: {
   if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
 
   const userId = await currentUserId();
+  if (!(await canFillAsUser(ctx.parish, userId))) {
+    return fail(ERROR_CODES.FILL_MEMBERS_ONLY);
+  }
   if (!canActAsPerson(person, userId)) {
     return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
   }
@@ -214,8 +222,13 @@ export async function releaseDirectSlotAction(input: {
   if (!person) return fail(ERROR_CODES.PERSON_NOT_FOUND);
 
   const userId = await currentUserId();
-  if (!canActAsPerson(person, userId)) {
-    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
+  if (!(await canFillAsUser(ctx.parish, userId))) {
+    return fail(ERROR_CODES.FILL_MEMBERS_ONLY);
+  }
+  // Giving a confirmed slot back is destructive, so it is held to the
+  // stricter test than marking availability is.
+  if (!(await canActDestructively(ctx.parish, person, userId))) {
+    return fail(ERROR_CODES.RELEASE_NEEDS_OWN_NAME);
   }
 
   const event = ctx.detail.days

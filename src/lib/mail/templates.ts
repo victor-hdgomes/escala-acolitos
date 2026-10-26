@@ -35,24 +35,45 @@ function layout(
 ): string {
   return `<!doctype html>
 <html lang="${df.locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;padding:24px;background:#f5f5f5;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#171717">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:24px">
-    <tr><td>
-      <h1 style="margin:0 0 16px;font-size:18px;line-height:1.3">${title}</h1>
+<body style="margin:0;padding:24px 16px;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#171717;-webkit-font-smoothing:antialiased">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;margin:0 auto">
+    <tr><td style="padding:0 4px 12px">
+      <span style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#737373">${t("layout.brand")}</span>
+    </td></tr>
+    <tr><td style="background:#ffffff;border:1px solid #e5e5e5;border-radius:12px;padding:28px 24px">
+      <h1 style="margin:0 0 16px;font-size:19px;line-height:1.35;font-weight:600;letter-spacing:-.01em">${title}</h1>
       ${body}
-      <p style="margin:24px 0 0;font-size:12px;color:#737373">${t("layout.footer")}</p>
+    </td></tr>
+    <tr><td style="padding:14px 4px 0">
+      <p style="margin:0;font-size:12px;line-height:1.5;color:#737373">${t("layout.footer")}</p>
     </td></tr>
   </table>
 </body></html>`;
 }
 
 function button(href: string, label: string): string {
-  return `<p style="margin:20px 0"><a href="${href}" style="display:inline-block;background:#171717;color:#fff;text-decoration:none;padding:12px 20px;border-radius:8px;font-weight:600">${label}</a></p>`;
+  return `<p style="margin:24px 0 4px"><a href="${href}" style="display:inline-block;background:#171717;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:9px;font-weight:600;font-size:15px;line-height:1">${label}</a></p>`;
+}
+
+/**
+ * Everything that reaches the markup goes through here first.
+ *
+ * Some of these values are typed by whoever holds a public link: the reason
+ * on a cover request, and a name an unclaimed row carries. Without escaping,
+ * that text is written straight into HTML that the whole ministry opens in
+ * their mail client.
+ */
+function esc(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 /** Markup is kept out of the catalog: translators get a plain sentence. */
 function strong(value: string): string {
-  return `<strong>${value}</strong>`;
+  return `<strong>${esc(value)}</strong>`;
 }
 
 export interface MassLine {
@@ -78,11 +99,13 @@ function massList(ctx: MailContext, items: MassLine[]): string {
       (m) =>
         `<li style="margin:0 0 10px;line-height:1.5"><strong>${whenOf(ctx, m.starts_at)}</strong><br>${
           m.label
-            ? t("massList.locationWithLabel", {
-                location: m.locationName,
-                label: m.label,
-              })
-            : m.locationName
+            ? esc(
+                t("massList.locationWithLabel", {
+                  location: m.locationName,
+                  label: m.label,
+                }),
+              )
+            : esc(m.locationName)
         }</li>`,
     )
     .join("");
@@ -108,7 +131,7 @@ export function schedulePublishedEmail({
     subject: t("schedulePublished.subject", months),
     html: layout(
       ctx,
-      t("schedulePublished.heading", { person: personName, ...months }),
+      esc(t("schedulePublished.heading", { person: personName, ...months })),
       `<p style="margin:0 0 12px">${t("schedulePublished.intro")}</p>
        ${massList(ctx, masses)}
        ${button(url, t("schedulePublished.cta"))}
@@ -133,7 +156,7 @@ export function reminderEmail({
     subject: t("reminder.subject"),
     html: layout(
       ctx,
-      t("reminder.heading", { person: personName }),
+      esc(t("reminder.heading", { person: personName })),
       `${massList(ctx, masses)}${button(url, t("reminder.cta"))}`,
     ),
   };
@@ -161,13 +184,13 @@ export function swapOpenedEmail({
     subject: t("swapOpened.subject", { requester: requesterName }),
     html: layout(
       ctx,
-      t("swapOpened.heading", { person: personName }),
+      esc(t("swapOpened.heading", { person: personName })),
       `<p style="margin:0 0 12px">${t("swapOpened.body", {
         requester: strong(requesterName),
         when: whenOf(ctx, starts_at),
-        location: locationName,
+        location: esc(locationName),
       })}</p>
-       ${reason ? `<p style="margin:0 0 12px;color:#525252">${t("swapOpened.reason", { reason })}</p>` : ""}
+       ${reason ? `<p style="margin:0 0 12px;color:#525252">${t("swapOpened.reason", { reason: esc(reason) })}</p>` : ""}
        <p style="margin:0 0 12px">${t("swapOpened.question")}</p>
        ${button(url, t("swapOpened.cta"))}`,
     ),
@@ -192,11 +215,11 @@ export function swapFilledEmail({
     subject: t("swapFilled.subject"),
     html: layout(
       ctx,
-      t("swapFilled.heading", { person: personName }),
+      esc(t("swapFilled.heading", { person: personName })),
       `<p style="margin:0">${t("swapFilled.body", {
         filledBy: strong(filledByName),
         when: whenOf(ctx, starts_at),
-        location: locationName,
+        location: esc(locationName),
       })}</p>`,
     ),
   };
@@ -219,7 +242,7 @@ export function inviteEmail({
     subject: t("invite.subject", { parish: parishName }),
     html: layout(
       ctx,
-      t("invite.heading", { parish: parishName }),
+      esc(t("invite.heading", { parish: parishName })),
       `<p style="margin:0 0 12px">${t("invite.body", { role: strong(roleLabel) })}</p>
        ${button(url, t("invite.cta"))}
        <p style="margin:0;font-size:13px;color:#525252">${t("invite.expiry", { days: 14 })}</p>`,

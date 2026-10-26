@@ -18,6 +18,9 @@ export type AssignmentStatus = "confirmed" | "swap_requested";
 export type SwapStatus = "open" | "filled" | "cancelled";
 /** Who may answer a schedule: anyone holding the link, or only group accounts. */
 export type FillAccess = "open" | "members";
+/** What a coordinator is telling the owner of the installation. */
+export type FeedbackKind = "idea" | "problem" | "question" | "other";
+export type FeedbackStatus = "new" | "read" | "done";
 
 export type Parish = {
   id: string;
@@ -71,6 +74,19 @@ export type JoinLink = {
   max_uses: number | null;
   uses: number;
   created_by: string | null;
+  created_at: string;
+}
+
+export type Feedback = {
+  id: string;
+  parish_id: string | null;
+  user_id: string | null;
+  kind: FeedbackKind;
+  message: string;
+  /** The screen they were on when they wrote it. */
+  page: string | null;
+  contact_email: string | null;
+  status: FeedbackStatus;
   created_at: string;
 }
 
@@ -219,6 +235,7 @@ export type Database = {
       memberships: Table<Membership>;
       invites: Table<Invite>;
       join_links: Table<JoinLink>;
+      feedback: Table<Feedback>;
       locations: Table<Location>;
       people: Table<Person>;
       mass_templates: Table<MassTemplate>;

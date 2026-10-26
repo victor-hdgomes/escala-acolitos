@@ -4,6 +4,7 @@ import * as React from "react";
 import { ArrowDownWideNarrow, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 
+import { FormSelect } from "@/components/molecules/form-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,46 +14,121 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+
+/** One person's turns (or marks) in one month at one place. */
+export interface StatCell {
+  month: string;
+  locationId: string;
+  count: number;
+}
 
 export interface StatRow {
   id: string;
   name: string;
-  served: number;
-  answered: number;
+  served: StatCell[];
+  answered: StatCell[];
   daysSinceLast: number | null;
-  topLocation: string | null;
 }
 
-type SortKey = "served" | "answered" | "absent";
+type SortKey = "served" | "answered" | "absent" | "overlooked";
+const SORT_KEYS: SortKey[] = ["served", "answered", "absent", "overlooked"];
 
-const SORT_KEYS: SortKey[] = ["served", "answered", "absent"];
+/** How far back the window reaches, in months. 0 means everything. */
+const PERIODS = [0, 3, 6, 12] as const;
 
 export function StatsView({
   rows,
   months,
+  locations,
 }: {
   rows: StatRow[];
-  months: Array<{ label: string; count: number }>;
+  months: Array<{ iso: string; label: string }>;
+  locations: Array<{ id: string; name: string }>;
 }) {
   const t = useTranslations("stats");
   const [sort, setSort] = React.useState<SortKey>("served");
+  const [period, setPeriod] = React.useState<number>(0);
+  const [locationId, setLocationId] = React.useState<string>("");
+
+  // The window is taken from the months that actually exist, not from the
+  // calendar: a ministry that skipped August should still see six schedules
+  // when it asks for six months.
+  const monthsInWindow = React.useMemo(() => {
+    const all = months.map((m) => m.iso);
+    if (!period) return new Set(all);
+    return new Set(all.slice(Math.max(0, all.length - period)));
+  }, [months, period]);
+
+  const sum = React.useCallback(
+    (cells: StatCell[]) =>
+      cells.reduce((total, cell) => {
+        if (!monthsInWindow.has(cell.month)) return total;
+        if (locationId && cell.locationId !== locationId) return total;
+        return total + cell.count;
+      }, 0),
+    [monthsInWindow, locationId],
+  );
+
+  const view = React.useMemo(
+    () =>
+      rows.map((r) => ({
+        ...r,
+        servedCount: sum(r.served),
+        answeredCount: sum(r.answered),
+      })),
+    [rows, sum],
+  );
 
   const sorted = React.useMemo(() => {
-    const copy = [...rows];
-    if (sort === "served") copy.sort((a, b) => b.served - a.served);
-    if (sort === "answered") copy.sort((a, b) => b.answered - a.answered);
+    const copy = [...view];
+    if (sort === "served") copy.sort((a, b) => b.servedCount - a.servedCount);
+    if (sort === "answered") {
+      copy.sort((a, b) => b.answeredCount - a.answeredCount);
+    }
     if (sort === "absent") {
-      // Never served comes first; then whoever has gone longest without serving.
-      copy.sort((a, b) => (b.daysSinceLast ?? 9999) - (a.daysSinceLast ?? 9999));
+      // Never served first, then whoever has gone longest without serving.
+      copy.sort((a, b) => (b.daysSinceLast ?? 99999) - (a.daysSinceLast ?? 99999));
+    }
+    if (sort === "overlooked") {
+      // The unfairest case in the whole product: said yes, never picked.
+      const gap = (r: (typeof copy)[number]) =>
+        r.servedCount === 0 ? r.answeredCount : -1;
+      copy.sort((a, b) => gap(b) - gap(a));
     }
     return copy;
-  }, [rows, sort]);
+  }, [view, sort]);
 
-  const maxServed = Math.max(1, ...rows.map((r) => r.served));
-  const totalServed = rows.reduce((sum, r) => sum + r.served, 0);
-  const average = rows.length ? totalServed / rows.length : 0;
-  const neverServed = rows.filter((r) => r.served === 0).length;
+  const maxServed = Math.max(1, ...view.map((r) => r.servedCount));
+  const totalServed = view.reduce((s, r) => s + r.servedCount, 0);
+  const average = view.length ? totalServed / view.length : 0;
+  const neverServed = view.filter((r) => r.servedCount === 0).length;
+  const overlooked = view.filter(
+    (r) => r.servedCount === 0 && r.answeredCount > 0,
+  ).length;
+
+  const monthBars = React.useMemo(
+    () =>
+      months
+        .filter((m) => monthsInWindow.has(m.iso))
+        .map((m) => ({
+          label: m.label,
+          count: rows.reduce(
+            (total, r) =>
+              total +
+              r.served
+                .filter(
+                  (c) =>
+                    c.month === m.iso &&
+                    (!locationId || c.locationId === locationId),
+                )
+                .reduce((n, c) => n + c.count, 0),
+            0,
+          ),
+        })),
+    [months, monthsInWindow, rows, locationId],
+  );
 
   function downloadCsv() {
     const header = [
@@ -60,14 +136,12 @@ export function StatsView({
       t("csv.served"),
       t("csv.answered"),
       t("csv.daysSinceLast"),
-      t("csv.topLocation"),
     ];
     const body = sorted.map((r) => [
       r.name,
-      String(r.served),
-      String(r.answered),
+      String(r.servedCount),
+      String(r.answeredCount),
       r.daysSinceLast === null ? t("neverServed") : String(r.daysSinceLast),
-      r.topLocation ?? "",
     ]);
     const csv = [header, ...body]
       .map((cols) =>
@@ -102,14 +176,51 @@ export function StatsView({
         </Button>
       </header>
 
-      {months.length > 1 ? (
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="stats-period">{t("filters.period")}</Label>
+          <FormSelect
+            id="stats-period"
+            name="period"
+            defaultValue="0"
+            options={PERIODS.map((p) => ({
+              value: String(p),
+              label: p === 0 ? t("filters.allTime") : t("filters.months", { count: p }),
+            }))}
+            onValueChange={(value) => setPeriod(Number(value))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="stats-location">{t("filters.location")}</Label>
+          <FormSelect
+            id="stats-location"
+            name="location"
+            defaultValue=""
+            options={[
+              { value: "", label: t("filters.allLocations") },
+              ...locations.map((l) => ({ value: l.id, label: l.name })),
+            ]}
+            onValueChange={setLocationId}
+          />
+        </div>
+      </div>
+
+      {overlooked > 0 ? (
+        <Card className="border-[color:var(--color-pending)]/50 bg-[color:var(--color-pending)]/5">
+          <CardContent className="py-4 text-sm">
+            {t("overlookedNotice", { count: overlooked })}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {monthBars.length > 1 ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">{t("byMonth.title")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
-            {months.map((m) => {
-              const max = Math.max(...months.map((x) => x.count), 1);
+            {monthBars.map((m) => {
+              const max = Math.max(...monthBars.map((x) => x.count), 1);
               return (
                 <div key={m.label} className="flex items-center gap-3">
                   <span className="w-28 shrink-0 truncate text-xs text-muted-foreground">
@@ -148,52 +259,65 @@ export function StatsView({
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            {t("roster.title", { count: rows.length })}
+            {t("roster.title", { count: view.length })}
           </CardTitle>
           <CardDescription>{t("roster.description")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-1">
-          {sorted.map((r, i) => (
-            <React.Fragment key={r.id}>
-              {i > 0 ? <Separator /> : null}
-              <div className="py-2">
-                <div className="flex items-center gap-3">
-                  <span className="min-w-0 flex-1 truncate text-sm">
-                    {r.name}
-                  </span>
-                  {r.served === 0 ? (
-                    <Badge
-                      variant="secondary"
-                      className="bg-[color:var(--color-open)]/15 text-[color:var(--color-open)]"
-                    >
-                      {t("neverServed")}
-                    </Badge>
-                  ) : (
-                    <span className="text-sm font-medium tabular-nums">
-                      {r.served}
+          {sorted.map((r, i) => {
+            // Rounded before comparing, so somebody on 3 turns against an
+            // average of 3.02 is not reported as behind.
+            const delta = Math.round(r.servedCount - average);
+            return (
+              <React.Fragment key={r.id}>
+                {i > 0 ? <Separator /> : null}
+                <div className="py-2">
+                  <div className="flex items-center gap-3">
+                    <span className="min-w-0 flex-1 truncate text-sm">
+                      {r.name}
                     </span>
-                  )}
-                </div>
-                <div className="mt-1 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                    <div
-                      className="h-full rounded-full bg-[color:var(--color-filled)]"
-                      style={{ width: `${(r.served / maxServed) * 100}%` }}
-                    />
+                    {r.servedCount === 0 ? (
+                      <Badge
+                        variant="secondary"
+                        className="bg-[color:var(--color-open)]/15 text-[color:var(--color-open)]"
+                      >
+                        {r.answeredCount > 0
+                          ? t("overlooked")
+                          : t("neverServed")}
+                      </Badge>
+                    ) : (
+                      <span className="text-sm font-medium tabular-nums">
+                        {r.servedCount}
+                      </span>
+                    )}
                   </div>
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-[color:var(--color-filled)]"
+                        style={{
+                          width: `${(r.servedCount / maxServed) * 100}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <p className="mt-1 truncate text-xs text-muted-foreground">
+                    {t("row.answered", { count: r.answeredCount })}
+                    {delta !== 0
+                      ? ` · ${
+                          delta > 0
+                            ? t("row.above", { count: delta })
+                            : t("row.below", { count: Math.abs(delta) })
+                        }`
+                      : ""}
+                    {r.daysSinceLast !== null
+                      ? ` · ${t("row.lastServed", { count: r.daysSinceLast })}`
+                      : ""}
+                  </p>
                 </div>
-                <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {t("row.answered", { count: r.answered })}
-                  {r.topLocation
-                    ? ` · ${t("row.topLocation", { location: r.topLocation })}`
-                    : ""}
-                  {r.daysSinceLast !== null
-                    ? ` · ${t("row.lastServed", { count: r.daysSinceLast })}`
-                    : ""}
-                </p>
-              </div>
-            </React.Fragment>
-          ))}
+              </React.Fragment>
+            );
+          })}
         </CardContent>
       </Card>
     </div>

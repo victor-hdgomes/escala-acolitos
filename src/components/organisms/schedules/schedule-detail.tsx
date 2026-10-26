@@ -37,6 +37,8 @@ export interface ScheduleViewProps {
   busyByDay: Record<string, string[]>;
   fillUrl: string;
   viewUrl: string;
+  /** The group has a weekly pattern, so an empty schedule has a way back. */
+  hasTemplates: boolean;
 }
 
 export function ScheduleDetailView(props: ScheduleViewProps) {

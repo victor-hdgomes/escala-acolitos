@@ -10,6 +10,7 @@ import {
   deleteTemplateAction,
   saveTemplateAction,
 } from "@/app/(app)/group/actions";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import {
@@ -86,6 +87,7 @@ export function TemplatesPanel({
 }) {
   const router = useRouter();
   const t = useTranslations("group.templates");
+  const tc = useTranslations("confirm");
   const weekdayNames = useWeekdayNames();
   const formatClock = useClockFormatter();
   const resultError = useResultError();
@@ -139,12 +141,10 @@ export function TemplatesPanel({
                       {t("slots", { count: tpl.slots })}
                     </Badge>
                     <TemplateDialog locations={locations} template={tpl} />
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      disabled={pending}
-                      aria-label={t("delete")}
-                      onClick={() =>
+                    <ConfirmAction
+                      title={tc("template.title")}
+                      description={`${tc("template.body")} ${tc("cannotUndo")}`}
+                      onConfirm={() =>
                         startTransition(async () => {
                           const message = resultError(
                             await deleteTemplateAction(tpl.id),
@@ -153,9 +153,17 @@ export function TemplatesPanel({
                           else router.refresh();
                         })
                       }
-                    >
-                      <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-                    </Button>
+                      trigger={
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          disabled={pending}
+                          aria-label={t("delete")}
+                        >
+                          <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                        </Button>
+                      }
+                    />
                   </div>
                 </React.Fragment>
               ))}

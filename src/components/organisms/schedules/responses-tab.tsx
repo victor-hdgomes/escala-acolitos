@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2, Copy, Users } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Copy, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
 
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
@@ -72,6 +73,23 @@ export function ResponsesTab({ detail, people, fillUrl }: ScheduleViewProps) {
       ? df.shortDate(detail.schedule.availability_deadline)
       : null,
   });
+
+  // Three zeroes and two empty lists read as a broken screen. With nobody on
+  // the list there is nothing to follow yet, and that is worth saying.
+  if (active.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border p-6 text-center">
+        <UserPlus className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+        <p className="text-sm font-medium">{t("emptyPeople.title")}</p>
+        <p className="mx-auto mt-1 max-w-sm text-sm text-balance text-muted-foreground">
+          {t("emptyPeople.responsesBody")}
+        </p>
+        <Button asChild className="tap-target mt-4">
+          <Link href="/people">{t("setup.peopleAction")}</Link>
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

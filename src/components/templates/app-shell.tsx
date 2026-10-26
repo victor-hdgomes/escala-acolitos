@@ -19,6 +19,7 @@ import {
   Plus,
   Repeat2,
   Settings,
+  ShieldCheck,
   Sun,
   Users,
 } from "lucide-react";
@@ -42,6 +43,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { FeedbackDialog } from "@/components/organisms/feedback/feedback-dialog";
 import { InstallAppButton } from "@/components/molecules/install-app-button";
 import { SaintTarcisius } from "@/components/organisms/landing/saint-tarcisius";
 import { Separator } from "@/components/ui/separator";
@@ -106,8 +108,20 @@ const NAV: NavItem[] = [
 
 const RANK: Record<Role, number> = { member: 0, coordinator: 1, admin: 2 };
 
-function visibleNav(role: Role): NavItem[] {
-  return NAV.filter((item) => RANK[role] >= RANK[item.minRole]);
+const ADMIN_ITEM: NavItem = {
+  href: "/admin",
+  icon: ShieldCheck,
+  labelKey: "admin",
+  minRole: "admin",
+};
+
+/**
+ * The installation screen is not a role, it is one account. It is appended
+ * rather than filtered, so no change to RANK can ever reveal it by accident.
+ */
+function visibleNav(role: Role, isSuperadmin: boolean): NavItem[] {
+  const items = NAV.filter((item) => RANK[role] >= RANK[item.minRole]);
+  return isSuperadmin ? [...items, ADMIN_ITEM] : items;
 }
 
 export function AppShell({
@@ -118,7 +132,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const items = visibleNav(user.effectiveRole);
+  const items = visibleNav(user.effectiveRole, user.isSuperadmin);
   // Bottom bar: the first three fit; the rest go under "More".
   const primary = items.slice(0, 3);
   const extra = items.slice(3);
@@ -389,6 +403,7 @@ function DesktopSidebar({
             <Link
               key={item.href}
               href={item.href}
+              data-tour={item.labelKey}
               aria-label={collapsed ? label : undefined}
               className={cn(
                 "flex items-center gap-3 rounded-md py-2 text-sm transition-colors",
@@ -417,6 +432,11 @@ function DesktopSidebar({
 
       <Separator />
       <div className={cn("space-y-2 p-2", collapsed && "flex flex-col items-center")}>
+        {!collapsed ? (
+          <div data-tour="feedback">
+            <FeedbackDialog className="w-full justify-start" />
+          </div>
+        ) : null}
         {!collapsed ? <InstallAppButton className="w-full justify-start" /> : null}
         {!collapsed ? (
           <div className="px-2">
@@ -483,6 +503,7 @@ function BottomNav({
           <Link
             key={item.href}
             href={item.href}
+            data-tour={item.labelKey}
             className={cn(
               "tap-target flex flex-1 flex-col items-center justify-center gap-1 py-2 text-[11px]",
               active ? "text-foreground" : "text-muted-foreground",
@@ -515,6 +536,7 @@ function BottomNav({
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={item.labelKey}
                   className="tap-target flex items-center gap-3 rounded-md px-3 text-sm"
                 >
                   <Icon className="h-4 w-4 text-muted-foreground" />
@@ -523,6 +545,9 @@ function BottomNav({
               );
             })}
             <Separator className="my-2" />
+            <div data-tour="feedback">
+              <FeedbackDialog className="w-full justify-start px-3" />
+            </div>
             <InstallAppButton className="w-full justify-start px-3" />
             <Separator className="my-2" />
             <form action={signOutAction}>

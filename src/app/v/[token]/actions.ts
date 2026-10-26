@@ -8,7 +8,11 @@ import { ERROR_CODES, fail, ok, type ActionResult } from "@/lib/action-result";
 import { logAudit } from "@/lib/audit";
 import { swapOpenedEmail } from "@/lib/mail/templates";
 import { sendMail } from "@/lib/mail/send";
-import { appUrl, canActAsPerson, resolveViewToken } from "@/lib/public-access";
+import {
+  appUrl,
+  canActDestructively,
+  resolveViewToken,
+} from "@/lib/public-access";
 import { getDateFormatter } from "@/lib/server-date";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -52,8 +56,10 @@ export async function requestSwapPublicAction(input: {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!canActAsPerson(slot.person, user?.id ?? null)) {
-    return fail(ERROR_CODES.NAME_LOCKED_TO_ACCOUNT);
+  // Opening a swap hands somebody else's confirmed slot to the group, so it
+  // takes the destructive test rather than the permissive one.
+  if (!(await canActDestructively(ctx.parish, slot.person, user?.id ?? null))) {
+    return fail(ERROR_CODES.SWAP_NEEDS_OWN_NAME);
   }
 
   const admin = createAdminClient();

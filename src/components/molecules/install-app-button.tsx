@@ -5,14 +5,6 @@ import { useTranslations } from "next-intl";
 import { Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,8 +15,6 @@ type InstallPrompt = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
-
-type Platform = "android" | "ios" | "desktop";
 
 function subscribeDisplayMode(onChange: () => void) {
   const query = window.matchMedia("(display-mode: standalone)");
@@ -38,26 +28,17 @@ function readStandalone(): boolean {
   return (window.navigator as { standalone?: boolean }).standalone === true;
 }
 
-/** Only read on click, so the server and the first paint agree. */
-function detectPlatform(): Platform {
-  const ua = navigator.userAgent;
-  if (/iPhone|iPad|iPod/.test(ua)) return "ios";
-  if (/Android/.test(ua)) return "android";
-  return "desktop";
-}
-
 /**
- * Puts the app on the reader's home screen.
+ * Puts the app on the reader's home screen, through the browser's own dialog.
  *
- * It is a web app, so there is no store listing and nothing to download, and
- * that is exactly the part nobody discovers on their own: a volunteer gets a
- * link in the group chat, opens it in a browser tab and loses it. One button
- * turns that tab into an icon.
+ * It renders nothing at all unless the browser has offered a real install
+ * prompt. A button that only explains where the Share menu is asks a
+ * volunteer to follow instructions, which is the thing this product exists
+ * to stop doing; better to show no button than a button that teaches.
  *
- * Browsers disagree about how. Chrome fires `beforeinstallprompt` and lets
- * the page open the real dialog; Safari never will, so iOS gets the three
- * words that describe its own Share menu. Hidden once it is installed, since
- * from inside the installed app there is nothing left to offer.
+ * In practice that means it appears on Chrome, Edge and Samsung Internet,
+ * once the manifest, the icons and the service worker are all in place, and
+ * stays hidden on iOS, where Safari implements no install API of any kind.
  */
 export function InstallAppButton({
   className,
@@ -74,12 +55,10 @@ export function InstallAppButton({
   );
 
   const [prompt, setPrompt] = React.useState<InstallPrompt | null>(null);
-  const [platform, setPlatform] = React.useState<Platform>("desktop");
-  const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
     function capture(event: Event) {
-      // Holding the event back is what keeps Chrome's own banner from
+      // Holding the event back is what keeps the browser's own banner from
       // appearing at a random moment; the button owns the invitation.
       event.preventDefault();
       setPrompt(event as InstallPrompt);
@@ -95,47 +74,26 @@ export function InstallAppButton({
     };
   }, []);
 
-  if (standalone) return null;
+  if (standalone || !prompt) return null;
 
-  async function activate() {
-    if (prompt) {
-      await prompt.prompt();
-      const { outcome } = await prompt.userChoice;
-      // The event is single-use: once answered, the browser will fire a new
-      // one if it still thinks the app is installable.
-      setPrompt(null);
-      if (outcome === "accepted") return;
-    }
-    setPlatform(detectPlatform());
-    setOpen(true);
+  async function install() {
+    if (!prompt) return;
+    await prompt.prompt();
+    await prompt.userChoice;
+    // The event is single use. If the browser still considers the app
+    // installable it fires a fresh one, which brings the button back.
+    setPrompt(null);
   }
 
   return (
-    <>
-      <Button
-        variant={variant}
-        size="sm"
-        className={cn("gap-2", className)}
-        onClick={() => void activate()}
-      >
-        <Smartphone className="h-4 w-4" />
-        {t("action")}
-      </Button>
-
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[calc(100svh-2rem)] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t("title")}</DialogTitle>
-            <DialogDescription>{t("description")}</DialogDescription>
-          </DialogHeader>
-          <p className="text-sm">{t(platform)}</p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
-              {t("dismiss")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+    <Button
+      variant={variant}
+      size="sm"
+      className={cn("gap-2", className)}
+      onClick={() => void install()}
+    >
+      <Smartphone className="h-4 w-4" />
+      {t("action")}
+    </Button>
   );
 }

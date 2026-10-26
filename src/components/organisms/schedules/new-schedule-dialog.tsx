@@ -1,11 +1,20 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CalendarHeart, CalendarRange, Plus } from "lucide-react";
+import {
+  CalendarHeart,
+  CalendarRange,
+  MapPin,
+  Plus,
+  Settings2,
+} from "lucide-react";
 
 import { createScheduleAction } from "@/app/(app)/schedules/actions";
 import { FormSelect } from "@/components/molecules/form-select";
+import { MonthField } from "@/components/molecules/month-field";
+import { QuickPlaceForm } from "@/components/organisms/onboarding/quick-place-form";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import { useFormAction } from "@/hooks/use-form-action";
 import { Button } from "@/components/ui/button";
@@ -39,6 +48,7 @@ export function NewScheduleDialog({
   const [open, setOpen] = React.useState(false);
   const [kind, setKind] = React.useState<Kind>("monthly");
   const [generate, setGenerate] = React.useState(hasTemplates);
+  const [byHand, setByHand] = React.useState(false);
 
   // Success redirects from inside the action itself; only the error comes back
   // here, and the hook already toasts it.
@@ -47,12 +57,22 @@ export function NewScheduleDialog({
   const nextMonth = addMonths(currentMonthIso(timezone), 1).slice(0, 7);
   const firstOfNextMonth = `${nextMonth}-01`;
 
+  // A form that can only produce an empty schedule is worse than no form: the
+  // dead end stays hidden until the assembly tab, long after the choice.
+  const needsSetup =
+    kind === "monthly" ? !hasTemplates && !byHand : locations.length === 0;
+
+  const chooseKind = (next: Kind) => {
+    setKind(next);
+    setByHand(false);
+  };
+
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setKind("monthly");
+        if (next) chooseKind("monthly");
       }}
     >
       <DialogTrigger asChild>
@@ -77,40 +97,117 @@ export function NewScheduleDialog({
             label={t("list.kindMonthlyLabel")}
             hint={t("list.kindMonthlyHint")}
             active={kind === "monthly"}
-            onClick={() => setKind("monthly")}
+            onClick={() => chooseKind("monthly")}
           />
           <KindOption
             icon={CalendarHeart}
             label={t("list.kindNovenaLabel")}
             hint={t("list.kindNovenaHint")}
             active={kind === "novena"}
-            onClick={() => setKind("novena")}
+            onClick={() => chooseKind("novena")}
           />
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-4">
-          <input type="hidden" name="kind" value={kind} />
-
-          {kind === "monthly" ? (
-            <MonthlyFields
-              defaultMonth={nextMonth}
-              hasTemplates={hasTemplates}
-              generate={generate}
-              onGenerateChange={setGenerate}
-            />
+        {needsSetup ? (
+          kind === "monthly" ? (
+            <MonthlySetupNeeded onByHand={() => setByHand(true)} />
           ) : (
-            <NovenaFields
-              locations={locations}
-              defaultFirstDay={firstOfNextMonth}
-            />
-          )}
+            <NovenaSetupNeeded />
+          )
+        ) : (
+          <form onSubmit={onSubmit} className="space-y-4">
+            <input type="hidden" name="kind" value={kind} />
 
-          <SubmitButton pending={pending} className="w-full">
-            {kind === "monthly" ? t("list.createSchedule") : t("novena.create")}
-          </SubmitButton>
-        </form>
+            {kind === "monthly" ? (
+              <MonthlyFields
+                defaultMonth={nextMonth}
+                referenceMonth={currentMonthIso(timezone).slice(0, 7)}
+                hasTemplates={hasTemplates}
+                generate={generate}
+                onGenerateChange={setGenerate}
+              />
+            ) : (
+              <NovenaFields
+                locations={locations}
+                defaultFirstDay={firstOfNextMonth}
+              />
+            )}
+
+            <SubmitButton pending={pending} className="w-full">
+              {kind === "monthly"
+                ? t("list.createSchedule")
+                : t("novena.create")}
+            </SubmitButton>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SetupNotice({
+  icon: Icon,
+  title,
+  body,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-5 text-center">
+      <Icon className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mt-1 text-sm text-balance text-muted-foreground">{body}</p>
+      <div className="mt-4 flex flex-col gap-2">{children}</div>
+    </div>
+  );
+}
+
+function MonthlySetupNeeded({ onByHand }: { onByHand: () => void }) {
+  const t = useTranslations("schedules");
+
+  return (
+    <SetupNotice
+      icon={Settings2}
+      title={t("setup.monthlyTitle")}
+      body={t("setup.monthlyBody")}
+    >
+      <QuickPlaceForm />
+      <Button asChild className="tap-target">
+        <Link href="/group?tab=templates">{t("setup.patternAction")}</Link>
+      </Button>
+      <Button asChild variant="outline" className="tap-target">
+        <Link href="/people">{t("setup.peopleAction")}</Link>
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        className="tap-target text-muted-foreground"
+        onClick={onByHand}
+      >
+        {t("setup.byHandAction")}
+      </Button>
+    </SetupNotice>
+  );
+}
+
+function NovenaSetupNeeded() {
+  const t = useTranslations("schedules");
+
+  return (
+    <SetupNotice
+      icon={MapPin}
+      title={t("setup.novenaTitle")}
+      body={t("setup.novenaBody")}
+    >
+      <QuickPlaceForm />
+      <Button asChild variant="outline" className="tap-target">
+        <Link href="/group?tab=locations">{t("setup.locationAction")}</Link>
+      </Button>
+    </SetupNotice>
   );
 }
 
@@ -148,11 +245,14 @@ function KindOption({
 
 function MonthlyFields({
   defaultMonth,
+  referenceMonth,
   hasTemplates,
   generate,
   onGenerateChange,
 }: {
   defaultMonth: string;
+  /** The month the picker's window is centred on, in the parish's zone. */
+  referenceMonth: string;
   hasTemplates: boolean;
   generate: boolean;
   onGenerateChange: (value: boolean) => void;
@@ -163,11 +263,13 @@ function MonthlyFields({
     <>
       <div className="space-y-2">
         <Label htmlFor="sch-month">{t("fields.month")}</Label>
-        <Input
+        <MonthField
           id="sch-month"
           name="month"
-          type="month"
           defaultValue={defaultMonth}
+          // Both anchored to the parish zone. Left to its UTC fallback the
+          // list slid a month for the last hours of every month here.
+          referenceMonth={referenceMonth}
           required
         />
       </div>

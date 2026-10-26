@@ -11,6 +11,7 @@ import {
   deleteJoinLinkAction,
   setJoinLinkActiveAction,
 } from "@/app/(app)/groups/actions";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +47,7 @@ export function JoinLinksCard({ links }: { links: JoinLink[] }) {
   const t = useTranslations("group.joinLinks");
   const roleLabel = useTranslations("group.roles");
   const common = useTranslations("common");
+  const tc = useTranslations("confirm");
   const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
 
@@ -196,15 +198,21 @@ export function JoinLinksCard({ links }: { links: JoinLink[] }) {
                     }
                   />
                 </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={pending}
-                  aria-label={common("delete")}
-                  onClick={() => run(() => deleteJoinLinkAction(link.id))}
-                >
-                  <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-                </Button>
+                <ConfirmAction
+                  title={tc("joinLink.title")}
+                  description={`${tc("joinLink.body")} ${tc("cannotUndo")}`}
+                  onConfirm={() => run(() => deleteJoinLinkAction(link.id))}
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={pending}
+                      aria-label={common("delete")}
+                    >
+                      <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                    </Button>
+                  }
+                />
               </div>
             </React.Fragment>
           );

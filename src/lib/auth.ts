@@ -183,6 +183,18 @@ export async function requireAdmin(): Promise<SessionContext> {
   return ctx;
 }
 
+/**
+ * The owner of the installation, for the screens only they may open.
+ *
+ * Sends anyone else home rather than to a refusal: a coordinator who guesses
+ * the URL should simply find themselves back where they belong.
+ */
+export async function requireSuperadmin(): Promise<SessionContext> {
+  const ctx = await requireSession();
+  if (!ctx.isSuperadmin) redirect("/home");
+  return ctx;
+}
+
 export function canManage(ctx: SessionContext): boolean {
   return ctx.role === "admin" || ctx.role === "coordinator";
 }

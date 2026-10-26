@@ -773,3 +773,233 @@ create policy join_links_delete on public.join_links for delete
 -- no policy above would let it through: that path runs with the service role,
 -- in `redeemJoinLinkAction`, which is also where expiry and the use count are
 -- checked. The policies here are for the screens that manage the links.
+
+------------------------------------------------------------------------------
+-- 0007_feedback.sql
+------------------------------------------------------------------------------
+-- A way for a coordinator to say something back.
+--
+-- The app is handed to parishes the author will never meet, so the only
+-- signal that something is wrong is somebody bothering to find a phone
+-- number. A box inside the app costs one table and removes that step.
+--
+-- Deliberately not public: only an account inside a group can write, which
+-- keeps it from becoming a contact form for the open internet. Only the owner
+-- of the installation reads it.
+
+create table if not exists public.feedback (
+  id uuid primary key default gen_random_uuid(),
+  -- Both nullable on purpose: a group can be deleted and the message it left
+  -- is still worth reading.
+  parish_id uuid references public.parishes(id) on delete set null,
+  user_id uuid references auth.users(id) on delete set null,
+  kind text not null default 'idea'
+    check (kind in ('idea', 'problem', 'question', 'other')),
+  message text not null check (char_length(btrim(message)) between 5 and 2000),
+  -- Which screen they were on. The difference between a vague "it is
+  -- confusing" and knowing exactly which screen confused them.
+  page text,
+  -- Only if they want an answer. Never filled in from the session.
+  contact_email text,
+  status text not null default 'new'
+    check (status in ('new', 'read', 'done')),
+  created_at timestamptz not null default now()
+);
+
+create index if not exists feedback_created_idx
+  on public.feedback(created_at desc);
+
+alter table public.feedback enable row level security;
+
+-- Anyone signed in writes, but only as themselves: the row carries the id of
+-- the account that sent it and that cannot be forged.
+drop policy if exists feedback_insert on public.feedback;
+create policy feedback_insert on public.feedback for insert
+  with check (auth.uid() is not null and user_id = auth.uid());
+
+-- Reading is the owner of the installation alone. A parish admin has no
+-- business seeing what another parish wrote.
+drop policy if exists feedback_select on public.feedback;
+create policy feedback_select on public.feedback for select
+  using (public.is_superadmin());
+
+drop policy if exists feedback_update on public.feedback;
+create policy feedback_update on public.feedback for update
+  using (public.is_superadmin());
+
+drop policy if exists feedback_delete on public.feedback;
+create policy feedback_delete on public.feedback for delete
+  using (public.is_superadmin());
+
+------------------------------------------------------------------------------
+-- 0008_tighten_access.sql
+------------------------------------------------------------------------------
+-- Closing what an audit of cross-account access turned up.
+--
+-- Everything here is the same mistake in four costumes: a policy written for
+-- the screen that uses it rather than for the API that is actually exposed.
+-- The publishable key sits in every browser, so /rest/v1 is reachable by
+-- anyone signed in, with whatever body they like. A policy is not a hint
+-- about which button exists; it is the only thing standing there.
+
+-- ============================================================
+-- 1. Claiming a name must not be a licence to rewrite the row
+-- ============================================================
+-- `people_claim_self` (0001) let any member UPDATE any unclaimed row of their
+-- parish. RLS cannot restrict columns, so that was not "may set claimed_by",
+-- it was "may rewrite full_name, email, phone and notes" on every altar
+-- server who has not linked an account yet.
+--
+-- Nothing in the app needs it: claimPersonAction and unlinkPersonAction both
+-- run with the service role, which no policy applies to.
+drop policy if exists people_claim_self on public.people;
+
+-- The identity link itself is an admin decision, which is how the app already
+-- treats it. A trigger rather than a policy, because this is about one pair
+-- of columns and policies cannot see columns.
+create or replace function public.guard_people_identity_link()
+returns trigger language plpgsql security definer set search_path = public as $$
+begin
+  if new.claimed_by is distinct from old.claimed_by
+     or new.claimed_at is distinct from old.claimed_at then
+    -- A null auth.uid() is the service role or the SQL editor: the server's
+    -- own path, which is where claiming and unlinking actually happen.
+    if auth.uid() is not null and not public.is_admin(old.parish_id) then
+      raise exception
+        'the link between an account and a name is set by a group admin';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists people_guard_identity_link on public.people;
+create trigger people_guard_identity_link
+  before update on public.people
+  for each row execute function public.guard_people_identity_link();
+
+-- ============================================================
+-- 2. A coordinator does not delete the group's furniture
+-- ============================================================
+-- The actions behind these screens all call requireAdmin, but the policies
+-- said can_manage, so a coordinator could delete straight over the API what
+-- the interface never offered them.
+drop policy if exists people_delete on public.people;
+create policy people_delete on public.people for delete
+  using (public.is_admin(parish_id));
+
+drop policy if exists locations_delete on public.locations;
+create policy locations_delete on public.locations for delete
+  using (public.is_admin(parish_id));
+
+drop policy if exists mass_templates_delete on public.mass_templates;
+create policy mass_templates_delete on public.mass_templates for delete
+  using (public.is_admin(parish_id));
+
+-- ============================================================
+-- 3. A join link is an admin tool, and it carries a role
+-- ============================================================
+-- 0006 gave these to can_manage. A join link names the role whoever uses it
+-- arrives with, so a coordinator could mint an admin link, open it, and come
+-- back an admin of the parish. Every join link action already calls
+-- requireAdmin; the policies now say the same thing.
+drop policy if exists join_links_select on public.join_links;
+create policy join_links_select on public.join_links for select
+  using (public.is_admin(parish_id));
+
+drop policy if exists join_links_insert on public.join_links;
+create policy join_links_insert on public.join_links for insert
+  with check (public.is_admin(parish_id));
+
+drop policy if exists join_links_update on public.join_links;
+create policy join_links_update on public.join_links for update
+  using (public.is_admin(parish_id))
+  with check (public.is_admin(parish_id));
+
+drop policy if exists join_links_delete on public.join_links;
+create policy join_links_delete on public.join_links for delete
+  using (public.is_admin(parish_id));
+
+-- ============================================================
+-- 4. Contact details are not part of "the list of names"
+-- ============================================================
+-- `people_select` let every member read every column of their parish's roster,
+-- e-mail, telephone and the coordinator's private notes included. The names
+-- are not the secret: the public fill link shows them to anyone. These three
+-- columns are, and the app never reads them with a member's own session.
+revoke select (email, phone, notes) on public.people from authenticated;
+revoke select (email, phone, notes) on public.people from anon;
+
+-- ============================================================
+-- 5. A capped join link has to actually cap
+-- ============================================================
+-- redeemJoinLinkAction read `uses`, created the membership, then wrote
+-- `uses + 1`. Two people opening the link at once both read the same number,
+-- so a link for five let in six. One statement decides it instead, and the
+-- seat is taken before the membership is created.
+create or replace function public.claim_join_link_seat(p_token text)
+returns uuid language plpgsql volatile
+security definer set search_path = public as $$
+declare
+  v_id uuid;
+begin
+  update public.join_links
+     set uses = uses + 1
+   where token = p_token
+     and active
+     and (expires_at is null or expires_at > now())
+     and (max_uses is null or uses < max_uses)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- Only the server calls it. Reaching it from a browser session would let
+-- somebody burn a link's seats without ever joining.
+revoke all on function public.claim_join_link_seat(text) from public;
+revoke all on function public.claim_join_link_seat(text) from anon;
+revoke all on function public.claim_join_link_seat(text) from authenticated;
+
+------------------------------------------------------------------------------
+-- 0009_people_column_privileges.sql
+------------------------------------------------------------------------------
+-- Item 4 of 0008 did not do anything, and the probe afterwards proved it.
+--
+-- Postgres does not break a table level grant down into column grants. The
+-- role still held SELECT on the whole of `people`, so revoking SELECT on
+-- three of its columns changed nothing: the broader privilege kept
+-- answering, and `?select=email` with the publishable key still returned 200
+-- instead of a permission error.
+--
+-- The order has to be the other way round. Take the table level privilege
+-- away first, then hand back exactly the columns that are not private.
+--
+-- What stays private: `email` and `phone` are contact details a coordinator
+-- collected, and `notes` is what the coordinator wrote about an altar server.
+-- The names themselves are not secret; the public fill link shows them to
+-- anyone who holds it.
+
+revoke select on public.people from authenticated;
+revoke select on public.people from anon;
+
+grant select (
+  id,
+  parish_id,
+  full_name,
+  short_name,
+  active,
+  claimed_by,
+  claimed_at,
+  created_at,
+  updated_at
+) on public.people to authenticated;
+
+-- `anon` is granted nothing back. No policy lets an anonymous session read
+-- `people` in the first place, and every public screen reaches it through the
+-- service role, after the token in the URL has been resolved on the server.
+
+-- INSERT, UPDATE and DELETE are untouched: they are governed by the policies
+-- in 0001 and 0008. The app never asks for the three private columns back on
+-- a write (every insert and update runs with return=minimal, and the two
+-- places that do read rows back ask only for ids), so nothing in the product
+-- changes.

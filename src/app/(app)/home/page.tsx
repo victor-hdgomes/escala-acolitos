@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { SetupChecklist } from "@/components/organisms/onboarding/setup-checklist";
 import { ClaimNameCard } from "@/components/organisms/people/claim-name-card";
 import { ScheduleStatusBadge } from "@/components/organisms/schedules/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,12 @@ export default async function HomePage() {
     .order("month", { ascending: false })
     .limit(1);
   const current = (schedules?.[0] ?? null) as Schedule | null;
+
+  // What the group still has to set up. Counted only for someone who could
+  // act on it, and head:true so this is four cheap counts and no rows.
+  const setup = manager
+    ? await loadSetupProgress(ctx.parish.id)
+    : null;
 
   // Open cover requests in the group - the most urgent thing in the app.
   const { data: openSwaps } = await admin
@@ -117,6 +124,8 @@ export default async function HomePage() {
         </h1>
         <p className="text-sm text-muted-foreground">{ctx.parish.name}</p>
       </header>
+
+      {setup ? <SetupChecklist {...setup} /> : null}
 
       {swaps.length ? (
         <Card className="border-[color:var(--color-pending)]/50 bg-[color:var(--color-pending)]/5">
@@ -267,6 +276,29 @@ export default async function HomePage() {
       ) : null}
     </div>
   );
+}
+
+/**
+ * The four counts behind the setup guide. A group is ready when all four are
+ * above zero, and until then the guide is the first thing on this page.
+ */
+async function loadSetupProgress(parishId: string) {
+  const admin = createAdminClient();
+  const count = async (table: "locations" | "mass_templates" | "people" | "schedules") => {
+    const { count: rows } = await admin
+      .from(table)
+      .select("id", { count: "exact", head: true })
+      .eq("parish_id", parishId);
+    return rows ?? 0;
+  };
+
+  const [locations, templates, people, schedules] = await Promise.all([
+    count("locations"),
+    count("mass_templates"),
+    count("people"),
+    count("schedules"),
+  ]);
+  return { locations, templates, people, schedules };
 }
 
 async function ClaimNameCardLoader({ parishId }: { parishId: string }) {

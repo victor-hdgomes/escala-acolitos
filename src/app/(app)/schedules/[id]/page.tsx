@@ -43,6 +43,7 @@ export default async function ScheduleDetailPage({
   const [
     { data: people },
     { data: locations },
+    { count: templateCount },
     { statsById, byLocation },
     busyByDay,
     df,
@@ -57,6 +58,14 @@ export default async function ScheduleDetailPage({
         .select("*")
         .eq("parish_id", ctx.parish.id)
         .order("sort_order", { ascending: true }),
+      // An empty schedule can offer to generate itself only if there is a
+      // weekly pattern to generate it from. Without this the empty state
+      // tells a group that has one that it has none.
+      admin
+        .from("mass_templates")
+        .select("id", { count: "exact", head: true })
+        .eq("parish_id", ctx.parish.id)
+        .eq("active", true),
       loadPersonStats(admin, ctx.parish.id, id),
       loadBusyDaysFromOtherSchedules(
         admin,
@@ -79,6 +88,7 @@ export default async function ScheduleDetailPage({
   return (
     <ScheduleDetailView
       detail={detail}
+      hasTemplates={(templateCount ?? 0) > 0}
       monthTitle={df.monthLabel(detail.schedule.month)}
       people={(people ?? []).map(toLite)}
       locations={((locations ?? []) as Location[]).map((l) => ({

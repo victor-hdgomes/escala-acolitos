@@ -12,6 +12,7 @@ import {
   type ActionResult,
 } from "@/lib/action-result";
 import { appUrl } from "@/lib/public-access";
+import { safeInternalPath } from "@/lib/safe-path";
 import { createClient } from "@/lib/supabase/server";
 
 const credentials = z.object({
@@ -33,10 +34,7 @@ export async function signInAction(
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return fail(authErrorCode(error.message));
 
-  const redirectTo = String(formData.get("redirect") || "/home");
-  // Internal paths only: a `redirect` arriving from the query string must not
-  // send the user out of the app once they are authenticated.
-  redirect(redirectTo.startsWith("/") ? redirectTo : "/home");
+  redirect(safeInternalPath(String(formData.get("redirect") || "")));
 }
 
 export async function signUpAction(

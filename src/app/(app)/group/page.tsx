@@ -27,7 +27,20 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
-export default async function GroupPage() {
+/** The tabs a link may name. Anything else falls back to the first one. */
+const TABS = ["members", "locations", "templates", "general"] as const;
+type GroupTab = (typeof TABS)[number];
+
+export default async function GroupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string }>;
+}) {
+  const { tab } = await searchParams;
+  const activeTab: GroupTab = TABS.includes(tab as GroupTab)
+    ? (tab as GroupTab)
+    : "members";
+
   const ctx = await requireAdmin();
   const admin = createAdminClient();
   const [t, locale] = await Promise.all([getTranslations("group"), getLocale()]);
@@ -112,7 +125,7 @@ export default async function GroupPage() {
           <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </header>
 
-        <Tabs defaultValue="members">
+        <Tabs defaultValue={activeTab}>
           <ScrollTabsList>
             <ScrollTabsTrigger value="members">
               {t("tabs.members")}

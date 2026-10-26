@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight, Link2 } from "lucide-react";
@@ -201,9 +202,16 @@ export default async function LandingPage() {
 
       {/* Saint Tarcisius. No buttons in this band. Ever. */}
       <LandingSection tone="shrine" className="text-center">
-        <SaintTarcisius
-          className="mx-auto h-42 w-42 motion-safe:animate-[achievement-rise_250ms_cubic-bezier(0.16,1,0.3,1)_both]"
-          title={t("tarcisius.figureAlt")}
+        {/* The holy card at its own size: the file is 253px wide, so anything
+            larger than this renders soft on a retina phone. No frame: the
+            image is the image. */}
+        <Image
+          src="/saint-tarcisius.png"
+          alt={t("tarcisius.figureAlt")}
+          width={253}
+          height={367}
+          priority={false}
+          className="mx-auto w-[11rem] max-w-full motion-safe:animate-[achievement-rise_250ms_cubic-bezier(0.16,1,0.3,1)_both]"
         />
         <LandingHeading className="mt-8">{t("tarcisius.title")}</LandingHeading>
         <LandingProse className="mt-4 text-left">

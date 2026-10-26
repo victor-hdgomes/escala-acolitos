@@ -1,4 +1,33 @@
 {
+  "admin": {
+    "feedback": {
+      "description": "O que os coordenadores escreveram de dentro do app.",
+      "empty": "Nada ainda.",
+      "markDone": "Resolvida",
+      "reopen": "Reabrir",
+      "reply": "Responder",
+      "title": "Sugestões",
+      "unread": "Nova"
+    },
+    "groups": {
+      "counts": "{members} com acesso · {servers} acólitos, {claimed} vinculados · {schedules} escalas",
+      "created": "aberto em {date}",
+      "description": "Mais novos primeiro. Grupo sem escala é alguém que abriu e parou.",
+      "empty": "Nenhum grupo ainda.",
+      "lastSchedule": "última escala em {date}",
+      "membersOnly": "Só membros",
+      "neverBuilt": "Sem escala",
+      "title": "Grupos"
+    },
+    "subtitle": "Todos os grupos, e o que as paróquias estão escrevendo.",
+    "title": "Instalação",
+    "totals": {
+      "accounts": "Contas",
+      "feedback": "Sem ler",
+      "parishes": "Grupos",
+      "schedules": "Escalas"
+    }
+  },
   "app": {
     "name": "Escala de Acólitos",
     "tagline": "A escala do ministério sem planilha, e sem perder nada no grupo."
@@ -67,6 +96,46 @@
     "today": "hoje",
     "you": "você"
   },
+  "confirm": {
+    "bulkPeople": {
+      "body": "Os nomes saem da lista de vez, junto com o histórico de onde serviram.",
+      "title": "{count, plural, one {Excluir # acólito?} other {Excluir # acólitos?}}"
+    },
+    "cannotUndo": "Isso não tem como desfazer.",
+    "event": {
+      "body": "Todo mundo escalado nela perde a vaga, e quem marcou disponibilidade perde a marcação.",
+      "title": "Excluir esta celebração?"
+    },
+    "invite": {
+      "body": "O link para de funcionar. Quem estiver com ele não vai conseguir entrar.",
+      "title": "Cancelar este convite?"
+    },
+    "joinLink": {
+      "body": "Quem ainda estiver com ele fica de fora. Quem já entrou por ele continua no grupo.",
+      "title": "Excluir este link?"
+    },
+    "location": {
+      "body": "{name} some do grupo. Celebrações já marcadas lá continuam, mas você não vai poder escolher ele de novo.",
+      "title": "Excluir este local?"
+    },
+    "member": {
+      "body": "A pessoa perde o acesso a este grupo. O nome continua na lista de acólitos, então as escalas antigas seguem mostrando quem serviu.",
+      "title": "Tirar {name} do grupo?"
+    },
+    "person": {
+      "body": "O nome sai da lista de vez, junto com o histórico de onde a pessoa serviu.",
+      "title": "Excluir {name}?"
+    },
+    "template": {
+      "body": "Meses já abertos mantêm as celebrações. Os próximos deixam de gerar esta missa.",
+      "title": "Tirar esta missa da semana?"
+    },
+    "unlink": {
+      "body": "O nome continua na lista, mas o dono deixa de ser o único que pode marcá-lo e para de receber os avisos por e-mail.",
+      "title": "Desvincular a conta de {name}?"
+    },
+    "unlinkAction": "Desvincular"
+  },
   "emails": {
     "invite": {
       "body": "Seu acesso será de {role}.",
@@ -76,6 +145,7 @@
       "subject": "Convite para {parish}"
     },
     "layout": {
+      "brand": "Escala de Acólitos",
       "footer": "Ministério de Acólitos · mensagem automática"
     },
     "massList": {
@@ -130,8 +200,12 @@
     "EVENT_LOCATION_REQUIRED": "Escolha onde é celebrada.",
     "EVENT_NOT_FOUND": "Não encontramos essa celebração.",
     "EVENT_SAVE_FAILED": "Não conseguimos salvar essa celebração.",
+    "FEEDBACK_SEND_FAILED": "Não conseguimos enviar. Tente de novo daqui a pouco.",
+    "FEEDBACK_TOO_LONG": "Ficou longo demais. Use até 2000 caracteres.",
+    "FEEDBACK_TOO_SHORT": "Escreva um pouco mais, para a gente entender.",
     "FILL_CLOSED_DEADLINE": "O prazo desta escala já terminou.",
     "FILL_CLOSED_STATUS": "Esta escala não está aberta para respostas.",
+    "FILL_MEMBERS_ONLY": "Este grupo pede que só o pessoal dele responda a escala. Entre com uma conta que faça parte do grupo.",
     "FORBIDDEN": "Você não tem permissão para isso.",
     "GROUP_CREATE_FAILED": "Não conseguimos criar o grupo. Tente de novo.",
     "GROUP_NAME_TOO_SHORT": "Dê um nome à sua paróquia ou capela.",
@@ -168,6 +242,7 @@
     "NAME_LOCKED_TO_ACCOUNT": "Esse nome está vinculado a uma conta. Entre com ela para continuar.",
     "NOT_AUTHENTICATED": "Faça login primeiro.",
     "NOT_A_MEMBER": "Você não participa desse grupo.",
+    "NOT_SUPERADMIN": "Essa tela é de quem administra a instalação.",
     "NOVENA_CREATE_FAILED": "Não conseguimos criar a novena.",
     "NOVENA_DAYS_TAKEN": "Alguns desses dias já têm celebração nesse local e horário.",
     "NOVENA_TITLE_REQUIRED": "Dê um nome à novena.",
@@ -183,6 +258,7 @@
     "PERSON_SAVE_FAILED": "Não conseguimos salvar essa pessoa.",
     "PERSON_UNLINK_FAILED": "Não conseguimos desvincular essa conta.",
     "RATE_LIMITED": "Muitas tentativas. Espere um minuto e tente de novo.",
+    "RELEASE_NEEDS_OWN_NAME": "Só o dono deste nome pode devolver a vaga. Peça para quem coordena liberar.",
     "RELEASE_SLOT_FAILED": "Não conseguimos liberar essa vaga.",
     "ROLE_CHANGE_FAILED": "Não conseguimos alterar esse papel.",
     "SCHEDULE_CREATE_FAILED": "Não conseguimos criar a escala.",
@@ -201,6 +277,7 @@
     "SWAP_ALREADY_FILLED": "Alguém já assumiu essa vaga.",
     "SWAP_CANCELLED": "Esse pedido foi cancelado.",
     "SWAP_IN_THE_PAST": "Essa celebração já passou.",
+    "SWAP_NEEDS_OWN_NAME": "Só quem está escalado, conectado na própria conta, pode pedir substituição por este link.",
     "SWAP_NOT_FOUND": "Não encontramos esse pedido.",
     "SWAP_NOT_OPEN": "Esse pedido não está aberto.",
     "SWAP_ONLY_OWN_MASS": "Você só pode pedir substituição da sua própria missa.",
@@ -214,6 +291,28 @@
     "TEMPLATE_SAVE_FAILED": "Não conseguimos salvar essa missa.",
     "UNASSIGN_FAILED": "Não conseguimos liberar essa vaga.",
     "UNEXPECTED": "Algo deu errado. Tente de novo."
+  },
+  "feedback": {
+    "action": "Enviar sugestão",
+    "description": "Vai direto para quem faz este app. Diga o que você estava tentando fazer e o que atrapalhou.",
+    "email": {
+      "subject": "{kind} de {parish}"
+    },
+    "emailHint": "Deixe em branco e a mensagem chega sem identificação.",
+    "emailLabel": "Seu e-mail, se quiser resposta",
+    "emailPlaceholder": "voce@exemplo.com",
+    "kindLabel": "Sobre o que é",
+    "kinds": {
+      "idea": "Uma ideia",
+      "other": "Outra coisa",
+      "problem": "Algo está errado",
+      "question": "Uma dúvida"
+    },
+    "messageLabel": "Sua mensagem",
+    "messagePlaceholder": "Eu estava tentando abrir o mês e...",
+    "sent": "Enviado. Obrigado.",
+    "submit": "Enviar",
+    "title": "Conta o que você achou"
   },
   "fill": {
     "autosaved": "salvo automaticamente",
@@ -685,6 +784,7 @@
     "whenLabel": "{weekday}, {date}"
   },
   "nav": {
+    "admin": "Instalação",
     "group": "Grupo",
     "home": "Início",
     "menu": "Menu",
@@ -707,6 +807,49 @@
     "headingAnother": "Criar outro grupo",
     "headingFirst": "Criar seu grupo",
     "title": "Novo grupo"
+  },
+  "onboarding": {
+    "doneLabel": "Pronto",
+    "guide": {
+      "assemble": "Você preenche as vagas vendo quem está disponível e quem serviu menos.",
+      "mark": "Cada pessoa acha o próprio nome e marca os dias em que pode servir.",
+      "publish": "Você publica. Quem não puder ir pede substituição, e o grupo resolve.",
+      "send": "Você abre o mês e manda um link no grupo.",
+      "summary": "Como funciona um mês"
+    },
+    "lockedHint": "A escala do mês nasce da grade semanal. Se você abrir o mês agora, ela vem sem nenhuma celebração. Termine os passos acima primeiro.",
+    "progress": "{done} de {total} prontos",
+    "quickPlace": {
+      "created": "Local adicionado",
+      "hint": "Os outros, os apelidos e as cores você acerta depois em Grupo.",
+      "label": "Nome da igreja ou capela",
+      "placeholder": "Igreja Matriz",
+      "submit": "Adicionar"
+    },
+    "steps": {
+      "locations": {
+        "action": "Cadastrar um local",
+        "title": "Locais",
+        "why": "Onde vocês celebram: a matriz, as capelas."
+      },
+      "people": {
+        "action": "Cadastrar acólitos",
+        "title": "Acólitos",
+        "why": "Quem pode servir. Cadastre os nomes ou mande um link para eles entrarem."
+      },
+      "schedule": {
+        "action": "Criar a primeira escala",
+        "title": "Primeira escala",
+        "why": "Abra o mês e todas as missas da grade já aparecem."
+      },
+      "templates": {
+        "action": "Montar a grade semanal",
+        "title": "Grade semanal",
+        "why": "As missas de uma semana normal e quantos acólitos cada uma precisa."
+      }
+    },
+    "subtitle": "São quatro passos, e o primeiro mês já vem montado.",
+    "title": "Deixar o grupo pronto"
   },
   "pending": {
     "code": {
@@ -733,6 +876,14 @@
     "title": "Aguardando liberação"
   },
   "people": {
+    "bulk": {
+      "activate": "Ativar",
+      "clear": "Limpar",
+      "deactivate": "Desativar",
+      "delete": "Excluir",
+      "selectAll": "Selecionar todos os exibidos",
+      "selected": "{count, plural, one {# selecionado} other {# selecionados}}"
+    },
     "count": "{count, plural, one {# pessoa} other {# pessoas}}",
     "dialog": {
       "createTitle": "Novo acólito",
@@ -799,7 +950,6 @@
       "autoFillResult": "{count, plural, =0 {Ninguém disponível para as vagas livres} one {# vaga preenchida} other {# vagas preenchidas}}",
       "availableTooltip": "Quem marcou disponibilidade",
       "clearSlot": "Tirar da vaga",
-      "emptyState": "Nenhuma celebração nesta escala.",
       "noMatches": "Nenhum nome encontrado.",
       "noneAvailable": "Ninguém marcou disponibilidade. Ative a opção acima para ver todos.",
       "onlyIncomplete": "Só celebrações com vaga livre",
@@ -834,13 +984,24 @@
       "title": "Escala",
       "unpublish": "Despublicar"
     },
+    "emptyPeople": {
+      "body": "O grupo ainda não tem acólitos na lista, então não há quem colocar nas vagas. Cadastre a turma uma vez e eles aparecem aqui.",
+      "responsesBody": "O grupo ainda não tem acólitos na lista, então não há respostas para acompanhar. Cadastre a turma primeiro e depois mande o link.",
+      "title": "Nenhum acólito na lista"
+    },
+    "emptySchedule": {
+      "addEvent": "Adicionar celebração",
+      "bodyNoPattern": "Nada foi gerado porque o grupo ainda não tem a grade semanal de missas. Cadastre uma vez e toda escala nova já nasce com as missas do mês.",
+      "bodyWithPattern": "Esta escala foi criada sem gerar as celebrações da grade. Dá para adicionar uma a uma aqui, ou conferir a grade antes.",
+      "openPattern": "Grade semanal",
+      "title": "Nenhuma celebração nesta escala"
+    },
     "events": {
       "add": "Celebração",
       "delete": "Excluir celebração",
       "dialogDescription": "Use “direto” quando a vaga for pegada pelo próprio acólito, como na novena.",
       "edit": "Editar celebração",
       "editTitle": "Editar celebração",
-      "emptyState": "Nenhuma celebração. Adicione uma, ou gere a partir da grade criando outra escala.",
       "kindMass": "Missa",
       "kindNovena": "Novena",
       "kindSpecial": "Celebração especial",
@@ -920,6 +1081,16 @@
       "reminderShareTitle": "Lembrete da escala"
     },
     "save": "Salvar",
+    "setup": {
+      "byHandAction": "Criar um mês vazio e montar na mão",
+      "locationAction": "Cadastrar um local",
+      "monthlyBody": "A escala do mês nasce da grade semanal de missas, e as vagas são preenchidas com a lista de acólitos. Sem essas duas coisas, o mês sai vazio.",
+      "monthlyTitle": "Primeiro prepare o grupo",
+      "novenaBody": "Toda novena acontece em algum lugar: a igreja, uma capela, uma comunidade. Cadastre esse local em Grupo, na aba Locais.",
+      "novenaTitle": "Nenhum local cadastrado",
+      "patternAction": "Cadastrar a grade semanal",
+      "peopleAction": "Cadastrar acólitos"
+    },
     "share": {
       "copyLink": "Copiar link",
       "copyMessage": "Copiar mensagem",
@@ -959,14 +1130,7 @@
       "short": "Escala"
     },
     "install": {
-      "action": "Instalar como app",
-      "android": "Toque em Instalar e confirme.",
-      "description": "Coloque na tela inicial do celular e ele abre como qualquer outro app, em tela cheia e sem a barra do navegador.",
-      "desktop": "Abra o menu do navegador e escolha Instalar, ou use o ícone no fim da barra de endereço.",
-      "dismiss": "Agora não",
-      "installed": "Já está na sua tela inicial.",
-      "ios": "Toque no botão Compartilhar e depois em Adicionar à Tela de Início.",
-      "title": "Deixe a um toque de distância"
+      "action": "Instalar como app"
     },
     "manifest": {
       "description": "Escala do ministério de acólitos: disponibilidade por link, montagem e substituição."
@@ -1014,24 +1178,34 @@
       "daysSinceLast": "Dias desde a última",
       "fileName": "estatisticas-acolitos.csv",
       "name": "Nome",
-      "served": "Escalas",
-      "topLocation": "Local mais frequente"
+      "served": "Escalas"
     },
     "exportCsv": "CSV",
+    "filters": {
+      "allLocations": "Todos os locais",
+      "allTime": "Desde o começo",
+      "location": "Local",
+      "months": "Últimos {count} meses",
+      "period": "Período"
+    },
     "metaTitle": "Estatísticas",
     "neverServed": "nunca serviu",
+    "overlooked": "Passou batido",
+    "overlookedNotice": "{count, plural, one {# pessoa marcou disponibilidade neste período e nunca foi escalada.} other {# pessoas marcaram disponibilidade neste período e nunca foram escaladas.}}",
     "roster": {
       "description": "A barra compara com quem mais serviu no período.",
       "title": "Acólitos ({count})"
     },
     "row": {
+      "above": "{count} acima da média",
       "answered": "{count, plural, one {# data marcada} other {# datas marcadas}}",
-      "lastServed": "{count, plural, one {última há # dia} other {última há # dias}}",
-      "topLocation": "mais em {location}"
+      "below": "{count} abaixo da média",
+      "lastServed": "{count, plural, one {última há # dia} other {última há # dias}}"
     },
     "sorts": {
       "absent": "Quem sumiu",
       "answered": "Quem responde mais",
+      "overlooked": "Marcou e nunca foi escalado",
       "served": "Quem serve mais"
     },
     "summary": "Média de {average} escalas por acólito · {count, plural, one {# nunca serviu} other {# nunca serviram}}",
@@ -1070,6 +1244,36 @@
     "unknownFiller": "Outro acólito",
     "unknownRequester": "Um acólito",
     "whenLabel": "{weekday}, {date} às {time}"
+  },
+  "tour": {
+    "back": "Voltar",
+    "done": "Entendi",
+    "next": "Próximo",
+    "progress": "{current} de {total}",
+    "skip": "Fechar",
+    "start": "Me mostra onde fica",
+    "steps": {
+      "feedback": {
+        "body": "Escreva daqui que chega em quem faz este app, junto com a tela em que você estava.",
+        "title": "Travou em algo?"
+      },
+      "group": {
+        "body": "Suas capelas, as missas de uma semana normal, quem pode responder e os links de entrada.",
+        "title": "Grupo"
+      },
+      "people": {
+        "body": "A lista de nomes. Ninguém precisa de conta: o nome já basta para ser escalado.",
+        "title": "Acólitos"
+      },
+      "schedules": {
+        "body": "Onde você abre o mês, manda o link no grupo e vê quem respondeu.",
+        "title": "Escalas"
+      },
+      "setup": {
+        "body": "São quatro passos, em ordem. Terminou, o primeiro mês sai num toque.",
+        "title": "Comece por aqui"
+      }
+    }
   },
   "whatsapp": {
     "csv": {

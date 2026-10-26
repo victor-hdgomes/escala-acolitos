@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
+import { safeInternalPath } from "@/lib/safe-path";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -21,16 +22,11 @@ const EMAIL_OTP_TYPES: EmailOtpType[] = [
   "email",
 ];
 
-function safeNext(value: string | null): string {
-  // Internal paths only: a tampered `next` must not lead out of the app.
-  return value && value.startsWith("/") && !value.startsWith("//")
-    ? value
-    : "/home";
-}
+
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
-  const next = safeNext(searchParams.get("next"));
+  const next = safeInternalPath(searchParams.get("next"));
   const supabase = await createClient();
 
   const code = searchParams.get("code");

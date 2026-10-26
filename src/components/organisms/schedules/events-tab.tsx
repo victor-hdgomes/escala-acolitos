@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CalendarHeart, Pencil, Plus, Trash2 } from "lucide-react";
+import { CalendarHeart, CalendarPlus, Pencil, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -11,6 +12,7 @@ import {
   deleteEventAction,
   saveEventAction,
 } from "@/app/(app)/schedules/actions";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { FormSelect } from "@/components/molecules/form-select";
 import { SubmitButton } from "@/components/molecules/submit-button";
 import { useDateFormatter } from "@/components/providers/timezone-provider";
@@ -33,9 +35,14 @@ import { Separator } from "@/components/ui/separator";
 import { dayKey, zonedParts } from "@/lib/date";
 import type { EventView, LocationLite } from "@/lib/schedule/types";
 
-export function EventsTab({ detail, locations }: ScheduleViewProps) {
+export function EventsTab({
+  detail,
+  locations,
+  hasTemplates,
+}: ScheduleViewProps) {
   const router = useRouter();
   const t = useTranslations("schedules");
+  const tc = useTranslations("confirm");
   const df = useDateFormatter();
   const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
@@ -95,12 +102,10 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
                     defaultDay={monthStart}
                     event={event}
                   />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    disabled={pending}
-                    aria-label={t("events.delete")}
-                    onClick={() =>
+                  <ConfirmAction
+                    title={tc("event.title")}
+                    description={`${tc("event.body")} ${tc("cannotUndo")}`}
+                    onConfirm={() =>
                       startTransition(async () => {
                         const res = await deleteEventAction(
                           event.id,
@@ -111,9 +116,17 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
                         else router.refresh();
                       })
                     }
-                  >
-                    <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-                  </Button>
+                    trigger={
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        disabled={pending}
+                        aria-label={t("events.delete")}
+                      >
+                        <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                      </Button>
+                    }
+                  />
                 </div>
               </React.Fragment>
             ))}
@@ -122,9 +135,18 @@ export function EventsTab({ detail, locations }: ScheduleViewProps) {
       ))}
 
       {detail.days.length === 0 ? (
-        <p className="py-10 text-center text-sm text-muted-foreground">
-          {t("events.emptyState")}
-        </p>
+        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+          <CalendarPlus className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+          <p className="text-sm font-medium">{t("emptySchedule.title")}</p>
+          <p className="mx-auto mt-1 max-w-sm text-sm text-balance text-muted-foreground">
+            {hasTemplates
+              ? t("emptySchedule.bodyWithPattern")
+              : t("emptySchedule.bodyNoPattern")}
+          </p>
+          <Button asChild variant="outline" className="tap-target mt-4">
+            <Link href="/group?tab=templates">{t("emptySchedule.openPattern")}</Link>
+          </Button>
+        </div>
       ) : null}
     </div>
   );
@@ -142,18 +164,21 @@ function timeInputValue(iso: string, timeZone: string): string {
   return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
 }
 
-function EventDialog({
+/** Exported so an empty schedule can offer the real form, not a pointer to it. */
+export function EventDialog({
   scheduleId,
   locations,
   timezone,
   defaultDay,
   event,
+  addLabel,
 }: {
   scheduleId: string;
   locations: LocationLite[];
   timezone: string;
   defaultDay: string;
   event?: EventView;
+  addLabel?: string;
 }) {
   const router = useRouter();
   const t = useTranslations("schedules");
@@ -176,9 +201,9 @@ function EventDialog({
             <Pencil className="h-4 w-4" />
           </Button>
         ) : (
-          <Button size="sm">
+          <Button size="sm" className="tap-target">
             <Plus className="h-4 w-4" />
-            {t("events.add")}
+            {addLabel ?? t("events.add")}
           </Button>
         )}
       </DialogTrigger>

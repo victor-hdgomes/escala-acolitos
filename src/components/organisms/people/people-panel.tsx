@@ -16,7 +16,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 
 import {
+  deletePeopleAction,
   deletePersonAction,
+  setPeopleActiveAction,
   importPeopleAction,
   savePersonAction,
   togglePersonActiveAction,
@@ -26,6 +28,8 @@ import { SubmitButton } from "@/components/molecules/submit-button";
 import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -61,8 +65,13 @@ export function PeoplePanel({
   currentPersonId: string | null;
 }) {
   const t = useTranslations("people");
+  const tc = useTranslations("confirm");
+  const resultError = useResultError();
+  const router = useRouter();
   const [query, setQuery] = React.useState("");
   const [onlyInactive, setOnlyInactive] = React.useState(false);
+  const [selected, setSelected] = React.useState<ReadonlySet<string>>(new Set());
+  const [bulkPending, startBulk] = React.useTransition();
 
   const filtered = React.useMemo(() => {
     const q = query
@@ -82,6 +91,38 @@ export function PeoplePanel({
   }, [people, query, onlyInactive]);
 
   const claimed = people.filter((p) => p.claimed).length;
+
+  // A name filtered out of view is a name nobody meant to act on, so the
+  // selection is always read back through the current filter.
+  const visibleIds = React.useMemo(
+    () => filtered.map((p) => p.id),
+    [filtered],
+  );
+  const chosen = visibleIds.filter((id) => selected.has(id));
+  const allChosen = chosen.length > 0 && chosen.length === visibleIds.length;
+
+  function toggle(id: string, on: boolean) {
+    setSelected((current) => {
+      const next = new Set(current);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function run(work: () => Promise<unknown>) {
+    startBulk(async () => {
+      const message = resultError(
+        (await work()) as Parameters<typeof resultError>[0],
+      );
+      if (message) {
+        toast.error(message);
+        return;
+      }
+      setSelected(new Set());
+      router.refresh();
+    });
+  }
 
   return (
     <div className="space-y-5">
@@ -114,9 +155,61 @@ export function PeoplePanel({
         </label>
       </div>
 
+      {chosen.length ? (
+        <div className="sticky top-16 z-20 flex flex-wrap items-center gap-2 rounded-lg border border-primary/40 bg-accent/80 p-3 backdrop-blur md:top-2">
+          <span className="min-w-0 flex-1 text-sm font-medium">
+            {t("bulk.selected", { count: chosen.length })}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkPending}
+            onClick={() => run(() => setPeopleActiveAction(chosen, true))}
+          >
+            {t("bulk.activate")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={bulkPending}
+            onClick={() => run(() => setPeopleActiveAction(chosen, false))}
+          >
+            {t("bulk.deactivate")}
+          </Button>
+          {isAdmin ? (
+            <ConfirmAction
+              title={tc("bulkPeople.title", { count: chosen.length })}
+              description={`${tc("bulkPeople.body")} ${tc("cannotUndo")}`}
+              onConfirm={() => run(() => deletePeopleAction(chosen))}
+              trigger={
+                <Button size="sm" variant="outline" disabled={bulkPending}>
+                  <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                  {t("bulk.delete")}
+                </Button>
+              }
+            />
+          ) : null}
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSelected(new Set())}
+          >
+            {t("bulk.clear")}
+          </Button>
+        </div>
+      ) : null}
+
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">
+          <CardTitle className="flex items-center gap-3 text-base">
+            <Checkbox
+              checked={allChosen}
+              aria-label={t("bulk.selectAll")}
+              disabled={visibleIds.length === 0}
+              onCheckedChange={(value) =>
+                setSelected(value === true ? new Set(visibleIds) : new Set())
+              }
+            />
             {t("count", { count: filtered.length })}
           </CardTitle>
         </CardHeader>
@@ -124,7 +217,16 @@ export function PeoplePanel({
           {filtered.map((person, i) => (
             <React.Fragment key={person.id}>
               {i > 0 ? <Separator /> : null}
-              <PersonLine person={person} isAdmin={isAdmin} />
+              <div className="flex items-center gap-3">
+                <Checkbox
+                  checked={selected.has(person.id)}
+                  aria-label={person.full_name}
+                  onCheckedChange={(value) => toggle(person.id, value === true)}
+                />
+                <div className="min-w-0 flex-1">
+                  <PersonLine person={person} isAdmin={isAdmin} />
+                </div>
+              </div>
             </React.Fragment>
           ))}
           {filtered.length === 0 ? (
@@ -146,6 +248,7 @@ function PersonLine({
   isAdmin: boolean;
 }) {
   const t = useTranslations("people");
+  const tc = useTranslations("confirm");
   const resultError = useResultError();
   const router = useRouter();
   const [pending, startTransition] = React.useTransition();
@@ -187,12 +290,12 @@ function PersonLine({
       />
       <PersonDialog person={person} />
       {isAdmin && person.claimed ? (
-        <Button
-          size="icon"
-          variant="ghost"
-          disabled={pending}
-          aria-label={t("row.unlink")}
-          onClick={() =>
+        <ConfirmAction
+          tone="neutral"
+          confirmLabel={tc("unlinkAction")}
+          title={tc("unlink.title", { name: person.full_name })}
+          description={tc("unlink.body")}
+          onConfirm={() =>
             startTransition(async () => {
               const message = resultError(await unlinkPersonAction(person.id));
               if (message) toast.error(message);
@@ -202,26 +305,40 @@ function PersonLine({
               }
             })
           }
-        >
-          <Link2Off className="h-4 w-4" />
-        </Button>
+          trigger={
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={pending}
+              aria-label={t("row.unlink")}
+            >
+              <Link2Off className="h-4 w-4" />
+            </Button>
+          }
+        />
       ) : null}
       {isAdmin ? (
-        <Button
-          size="icon"
-          variant="ghost"
-          disabled={pending}
-          aria-label={t("row.delete", { name: person.full_name })}
-          onClick={() =>
+        <ConfirmAction
+          title={tc("person.title", { name: person.full_name })}
+          description={`${tc("person.body")} ${tc("cannotUndo")}`}
+          onConfirm={() =>
             startTransition(async () => {
               const message = resultError(await deletePersonAction(person.id));
               if (message) toast.error(message);
               else router.refresh();
             })
           }
-        >
-          <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-        </Button>
+          trigger={
+            <Button
+              size="icon"
+              variant="ghost"
+              disabled={pending}
+              aria-label={t("row.delete", { name: person.full_name })}
+            >
+              <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+            </Button>
+          }
+        />
       ) : null}
     </div>
   );

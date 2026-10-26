@@ -1,13 +1,16 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
+  CalendarPlus,
   Loader2,
   Plus,
   Search,
+  UserPlus,
   Users,
   Wand2,
   X,
@@ -15,6 +18,7 @@ import {
 import { toast } from "sonner";
 
 import { assignAction, autoFillEventAction } from "@/app/(app)/schedules/actions";
+import { EventDialog } from "@/components/organisms/schedules/events-tab";
 import type { ScheduleViewProps } from "@/components/organisms/schedules/schedule-detail";
 import { useDateFormatter } from "@/components/providers/timezone-provider";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +46,11 @@ interface OpenSlot {
 export function AssemblyTab({
   detail,
   people,
+  locations,
   stats,
   locationCounts,
   busyByDay,
+  hasTemplates,
 }: ScheduleViewProps) {
   const router = useRouter();
   const t = useTranslations("schedules");
@@ -66,6 +72,12 @@ export function AssemblyTab({
         .filter((d) => d.events.length),
     [detail.days, onlyIncomplete],
   );
+
+  // Assembly needs both sides: celebrations to fill and altar servers to put in
+  // them. Either one missing is a dead end the coordinator cannot leave from
+  // this tab, so each says where to go.
+  const hasEvents = detail.days.some((d) => d.events.length > 0);
+  const hasPeople = people.some((p) => p.active);
 
   const autoFill = (event: EventView) =>
     startTransition(async () => {
@@ -98,10 +110,54 @@ export function AssemblyTab({
 
   return (
     <div className="space-y-4">
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Switch checked={onlyIncomplete} onCheckedChange={setOnlyIncomplete} />
-        {t("assembly.onlyIncomplete")}
-      </label>
+      {hasEvents ? (
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Switch checked={onlyIncomplete} onCheckedChange={setOnlyIncomplete} />
+          {t("assembly.onlyIncomplete")}
+        </label>
+      ) : null}
+
+      {!hasEvents ? (
+        <EmptyNotice
+          icon={CalendarPlus}
+          title={t("emptySchedule.title")}
+          body={
+            hasTemplates
+              ? t("emptySchedule.bodyWithPattern")
+              : t("emptySchedule.bodyNoPattern")
+          }
+        >
+          {/* Offered only once there is somewhere to celebrate. The dialog's
+              place picker is a required hidden input, so with no places it
+              cannot be filled and the browser refuses to submit, silently. */}
+          {locations.length ? (
+            <EventDialog
+              scheduleId={detail.schedule.id}
+              locations={locations}
+              timezone={detail.timezone}
+              defaultDay={detail.schedule.month}
+              addLabel={t("emptySchedule.addEvent")}
+            />
+          ) : null}
+          <Button asChild variant="outline" className="tap-target">
+            <Link href={locations.length ? "/group?tab=templates" : "/group?tab=locations"}>
+              {t("emptySchedule.openPattern")}
+            </Link>
+          </Button>
+        </EmptyNotice>
+      ) : null}
+
+      {!hasPeople ? (
+        <EmptyNotice
+          icon={UserPlus}
+          title={t("emptyPeople.title")}
+          body={t("emptyPeople.body")}
+        >
+          <Button asChild className="tap-target">
+            <Link href="/people">{t("setup.peopleAction")}</Link>
+          </Button>
+        </EmptyNotice>
+      ) : null}
 
       {days.map((day) => (
         <section key={day.key}>
@@ -258,9 +314,9 @@ export function AssemblyTab({
         </section>
       ))}
 
-      {days.length === 0 ? (
+      {hasEvents && days.length === 0 ? (
         <p className="py-10 text-center text-sm text-muted-foreground">
-          {onlyIncomplete ? t("assembly.allFilled") : t("assembly.emptyState")}
+          {t("assembly.allFilled")}
         </p>
       ) : null}
 
@@ -273,6 +329,31 @@ export function AssemblyTab({
         locationCounts={locationCounts}
         busyByDay={busyByDay}
       />
+    </div>
+  );
+}
+
+function EmptyNotice({
+  icon: Icon,
+  title,
+  body,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border border-dashed border-border p-6 text-center">
+      <Icon className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+      <p className="text-sm font-medium">{title}</p>
+      <p className="mx-auto mt-1 max-w-sm text-sm text-balance text-muted-foreground">
+        {body}
+      </p>
+      <div className="mt-4 flex flex-col items-center gap-2 sm:flex-row sm:justify-center">
+        {children}
+      </div>
     </div>
   );
 }

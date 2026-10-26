@@ -264,6 +264,54 @@ export function joinLinkClosedReason(
   return null;
 }
 
+/**
+ * Whether this visitor may answer, given the group's setting.
+ *
+ * Lives here, next to the token resolution, because the gate has to run on
+ * every path the token opens. It used to live only in the page, so the three
+ * Server Actions behind the fill screen accepted writes from anyone holding
+ * the link even when the group had chosen members only: the screen refused
+ * while the endpoints did not.
+ */
+export async function canFillAsUser(
+  parish: Pick<Parish, "id" | "fill_access">,
+  userId: string | null,
+): Promise<boolean> {
+  if (parish.fill_access !== "members") return true;
+  if (!userId) return false;
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("memberships")
+    .select("id")
+    .eq("parish_id", parish.id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  return !!data;
+}
+
+/**
+ * Whether this visitor may take an action that costs somebody else something:
+ * releasing a slot that is already confirmed, or asking for cover on it.
+ *
+ * Marking availability is forgiving, so an unclaimed name stays open to
+ * whoever holds the link, which is what lets a parish run without accounts.
+ * Undoing another person's confirmed slot is not forgiving, so in a group
+ * that asked for accounts it takes the owner of the name. In an open group it
+ * stays reachable on purpose: there, anyone with the link could retake the
+ * slot a second later anyway, and a coordinator can always undo it from the
+ * assembly screen.
+ */
+export async function canActDestructively(
+  parish: Pick<Parish, "id" | "fill_access">,
+  person: Pick<Person, "claimed_by">,
+  userId: string | null,
+): Promise<boolean> {
+  if (!canActAsPerson(person, userId)) return false;
+  if (parish.fill_access !== "members") return true;
+  return canFillAsUser(parish, userId);
+}
+
 export function appUrl(path: string): string {
   const base =
     process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??

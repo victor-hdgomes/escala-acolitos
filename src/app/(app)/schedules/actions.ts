@@ -264,6 +264,7 @@ export async function setScheduleStatusAction(
 
   revalidatePath(`/schedules/${scheduleId}`);
   revalidatePath("/schedules");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -279,6 +280,7 @@ export async function deleteScheduleAction(
     .eq("parish_id", ctx.parish.id);
   if (error) return fail(ERROR_CODES.SCHEDULE_DELETE_FAILED);
   revalidatePath("/schedules");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -659,6 +661,7 @@ export async function publishScheduleAction(
 
   revalidatePath(`/schedules/${scheduleId}`);
   revalidatePath("/schedules");
+  revalidatePath("/home");
   return ok({ notified });
 }
 
@@ -857,6 +860,33 @@ export async function cancelSwapAction(swapId: string): Promise<ActionResult> {
     .maybeSingle();
   if (!swap || swap.status !== "open") return fail(ERROR_CODES.SWAP_NOT_OPEN);
 
+  // Which group does this swap belong to? Without asking, a coordinator of
+  // any parish could cancel any other parish's cover request by its id: the
+  // role below was being checked against the caller's own group while the row
+  // came from somewhere else entirely.
+  const { data: assignment } = await admin
+    .from("assignments")
+    .select("event_id")
+    .eq("id", swap.assignment_id)
+    .maybeSingle();
+  const { data: event } = assignment
+    ? await admin
+        .from("events")
+        .select("schedule_id")
+        .eq("id", assignment.event_id)
+        .maybeSingle()
+    : { data: null };
+  const { data: schedule } = event
+    ? await admin
+        .from("schedules")
+        .select("parish_id")
+        .eq("id", event.schedule_id)
+        .maybeSingle()
+    : { data: null };
+  if (!schedule || schedule.parish_id !== ctx.parish.id) {
+    return fail(ERROR_CODES.SWAP_NOT_OPEN);
+  }
+
   const isManager = ctx.role !== "member";
   if (!isManager && ctx.person?.id !== swap.requested_by_person) {
     return fail(ERROR_CODES.SWAP_ONLY_OWN_REQUEST);
@@ -873,5 +903,6 @@ export async function cancelSwapAction(swapId: string): Promise<ActionResult> {
 
   revalidatePath("/my-masses");
   revalidatePath("/schedules");
+  revalidatePath("/home");
   return ok();
 }

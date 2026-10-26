@@ -71,6 +71,7 @@ export async function saveLocationAction(
   }
 
   revalidatePath("/group");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -87,6 +88,7 @@ export async function deleteLocationAction(id: string): Promise<ActionResult> {
     return fail(ERROR_CODES.LOCATION_IN_USE);
   }
   revalidatePath("/group");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -103,6 +105,7 @@ export async function toggleLocationAction(
     .eq("parish_id", ctx.parish.id);
   if (error) return fail(ERROR_CODES.LOCATION_SAVE_FAILED);
   revalidatePath("/group");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -159,6 +162,7 @@ export async function saveTemplateAction(
   }
 
   revalidatePath("/group");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -172,6 +176,7 @@ export async function deleteTemplateAction(id: string): Promise<ActionResult> {
     .eq("parish_id", ctx.parish.id);
   if (error) return fail(ERROR_CODES.TEMPLATE_DELETE_FAILED);
   revalidatePath("/group");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -227,6 +232,7 @@ export async function savePersonAction(
   }
 
   revalidatePath("/people");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -243,6 +249,7 @@ export async function togglePersonActiveAction(
     .eq("parish_id", ctx.parish.id);
   if (error) return fail(ERROR_CODES.PERSON_SAVE_FAILED);
   revalidatePath("/people");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -256,6 +263,7 @@ export async function deletePersonAction(id: string): Promise<ActionResult> {
     .eq("parish_id", ctx.parish.id);
   if (error) return fail(ERROR_CODES.PERSON_DELETE_FAILED);
   revalidatePath("/people");
+  revalidatePath("/home");
   return ok();
 }
 
@@ -303,6 +311,7 @@ export async function importPeopleAction(
   });
 
   revalidatePath("/people");
+  revalidatePath("/home");
   return ok({ added: data?.length ?? 0 });
 }
 
@@ -367,5 +376,73 @@ export async function unlinkPersonAction(personId: string): Promise<ActionResult
   });
 
   revalidatePath("/people");
+  revalidatePath("/home");
   return ok();
+}
+
+// ============================================================
+// Acting on several altar servers at once
+// ============================================================
+// A coordinator tidying the list at the end of a year is doing the same thing
+// forty times. These take the ids the screen has selected and apply one
+// change, with the parish scope on every statement so a selection can never
+// reach a row outside the group the caller is in.
+
+const bulkIds = z.array(z.string().uuid()).min(1).max(500);
+
+export async function setPeopleActiveAction(
+  ids: string[],
+  active: boolean,
+): Promise<ActionResult<{ changed: number }>> {
+  const ctx = await requireManager();
+  const parsed = bulkIds.safeParse(ids);
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
+
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("people")
+    .update({ active }, { count: "exact" })
+    .eq("parish_id", ctx.parish.id)
+    .in("id", parsed.data);
+  if (error) return fail(ERROR_CODES.PERSON_SAVE_FAILED);
+
+  await logAudit({
+    parishId: ctx.parish.id,
+    actorUserId: ctx.userId,
+    action: active ? "people.activate" : "people.deactivate",
+    entity: "people",
+    payload: { count: parsed.data.length },
+  });
+
+  revalidatePath("/people");
+  revalidatePath("/home");
+  return ok({ changed: count ?? parsed.data.length });
+}
+
+export async function deletePeopleAction(
+  ids: string[],
+): Promise<ActionResult<{ changed: number }>> {
+  const ctx = await requireAdmin();
+  const parsed = bulkIds.safeParse(ids);
+  if (!parsed.success) return fail(ERROR_CODES.INVALID_REQUEST);
+
+  const supabase = await createClient();
+  const { error, count } = await supabase
+    .from("people")
+    .delete({ count: "exact" })
+    .eq("parish_id", ctx.parish.id)
+    .in("id", parsed.data);
+  if (error) return fail(ERROR_CODES.PERSON_DELETE_FAILED);
+
+  await logAudit({
+    parishId: ctx.parish.id,
+    actorUserId: ctx.userId,
+    action: "people.delete.bulk",
+    entity: "people",
+    payload: { count: parsed.data.length },
+  });
+
+  revalidatePath("/people");
+  revalidatePath("/home");
+  return ok({ changed: count ?? parsed.data.length });
 }

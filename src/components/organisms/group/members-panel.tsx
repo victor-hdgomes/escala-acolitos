@@ -12,6 +12,7 @@ import {
   removeMemberAction,
   revokeInviteAction,
 } from "@/app/(app)/groups/actions";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { FormSelect } from "@/components/molecules/form-select";
 import {
   AddMemberCard,
@@ -177,6 +178,7 @@ function MemberList({ members }: { members: MemberRow[] }) {
   const router = useRouter();
   const t = useTranslations("group.members.list");
   const common = useTranslations("common");
+  const tc = useTranslations("confirm");
   const help = useTranslations("group.roleHelp");
   const roleLabel = useRoleLabel();
   const resultError = useResultError();
@@ -242,15 +244,21 @@ function MemberList({ members }: { members: MemberRow[] }) {
                   disabled={pending}
                   onChange={(role) => change(m.userId, role)}
                 />
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={pending}
-                  aria-label={t("remove", { name: m.name })}
-                  onClick={() => remove(m.userId, m.name)}
-                >
-                  <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-                </Button>
+                <ConfirmAction
+                  title={tc("member.title", { name: m.name })}
+                  description={tc("member.body")}
+                  onConfirm={() => remove(m.userId, m.name)}
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={pending}
+                      aria-label={t("remove", { name: m.name })}
+                    >
+                      <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                    </Button>
+                  }
+                />
               </div>
             </div>
           </React.Fragment>
@@ -297,6 +305,7 @@ function PendingInvites({ invites }: { invites: Invite[] }) {
   const router = useRouter();
   const t = useTranslations("group.members.pending");
   const common = useTranslations("common");
+  const tc = useTranslations("confirm");
   const roleLabel = useRoleLabel();
   const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
@@ -341,12 +350,10 @@ function PendingInvites({ invites }: { invites: Invite[] }) {
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  disabled={pending}
-                  aria-label={t("revoke")}
-                  onClick={() =>
+                <ConfirmAction
+                  title={tc("invite.title")}
+                  description={tc("invite.body")}
+                  onConfirm={() =>
                     startTransition(async () => {
                       const message = resultError(
                         await revokeInviteAction(inv.id),
@@ -355,9 +362,17 @@ function PendingInvites({ invites }: { invites: Invite[] }) {
                       else router.refresh();
                     })
                   }
-                >
-                  <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-                </Button>
+                  trigger={
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={pending}
+                      aria-label={t("revoke")}
+                    >
+                      <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                    </Button>
+                  }
+                />
               </div>
             </React.Fragment>
           );

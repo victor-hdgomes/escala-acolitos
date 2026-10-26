@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 
 import { StatsView } from "@/components/organisms/stats/stats-view";
+import type { StatCell, StatRow } from "@/components/organisms/stats/stats-view";
 import { requireManager } from "@/lib/auth";
 import { nowMs } from "@/lib/now";
 import { getDateFormatter } from "@/lib/server-date";
@@ -15,6 +16,12 @@ export async function generateMetadata(): Promise<Metadata> {
 /**
  * Who serves a lot, who serves little, who has disappeared. The question
  * nobody can answer today by staring at the spreadsheet.
+ *
+ * The totals are not computed here. Each person arrives with their turns
+ * broken down by month and by place, and the screen adds them up for whatever
+ * window and whichever chapel the coordinator is looking at. A parish has
+ * tens of people and hundreds of turns, so that costs nothing to send and
+ * saves a round trip on every change of filter.
  */
 export default async function StatsPage() {
   const ctx = await requireManager();
@@ -61,65 +68,68 @@ export default async function StatsPage() {
   ]);
 
   const eventById = new Map((events ?? []).map((e) => [e.id, e]));
-  const scheduleById = new Map((schedules ?? []).map((s) => [s.id, s]));
+  const monthBySchedule = new Map((schedules ?? []).map((s) => [s.id, s.month]));
   const now = nowMs();
 
-  const served = new Map<string, number>();
-  const perLocation = new Map<string, Map<string, number>>();
-  const perMonth = new Map<string, number>();
-  const lastServed = new Map<string, string>();
+  /** Turns and marks, keyed by "month|location" so one pass fills both. */
+  function tally(rows: Array<{ person_id: string; event_id: string }> | null) {
+    const byPerson = new Map<string, Map<string, number>>();
+    for (const row of rows ?? []) {
+      const event = eventById.get(row.event_id);
+      if (!event) continue;
+      const month = monthBySchedule.get(event.schedule_id);
+      if (!month) continue;
+      const key = `${month}|${event.location_id}`;
+      const cells = byPerson.get(row.person_id) ?? new Map<string, number>();
+      cells.set(key, (cells.get(key) ?? 0) + 1);
+      byPerson.set(row.person_id, cells);
+    }
+    return byPerson;
+  }
 
+  const servedCells = tally(assignments);
+  const answeredCells = tally(availabilities);
+
+  const lastServed = new Map<string, string>();
   for (const a of assignments ?? []) {
     const event = eventById.get(a.event_id);
-    if (!event) continue;
-    served.set(a.person_id, (served.get(a.person_id) ?? 0) + 1);
-
-    const loc = perLocation.get(a.person_id) ?? new Map<string, number>();
-    loc.set(event.location_id, (loc.get(event.location_id) ?? 0) + 1);
-    perLocation.set(a.person_id, loc);
-
-    const schedule = scheduleById.get(event.schedule_id);
-    if (schedule) {
-      perMonth.set(schedule.month, (perMonth.get(schedule.month) ?? 0) + 1);
-    }
-
-    if (Date.parse(event.starts_at) <= now) {
-      const prev = lastServed.get(a.person_id);
-      if (!prev || event.starts_at > prev) {
-        lastServed.set(a.person_id, event.starts_at);
-      }
+    if (!event || Date.parse(event.starts_at) > now) continue;
+    const previous = lastServed.get(a.person_id);
+    if (!previous || event.starts_at > previous) {
+      lastServed.set(a.person_id, event.starts_at);
     }
   }
 
-  const answered = new Map<string, number>();
-  for (const av of availabilities ?? []) {
-    answered.set(av.person_id, (answered.get(av.person_id) ?? 0) + 1);
-  }
+  const toCells = (cells: Map<string, number> | undefined): StatCell[] =>
+    [...(cells ?? new Map()).entries()].map(([key, count]) => {
+      const [month, locationId] = key.split("|");
+      return { month, locationId, count };
+    });
 
-  const rows = (people ?? [])
+  const rows: StatRow[] = (people ?? [])
     .filter((p) => p.active)
     .map((p) => ({
       id: p.id,
       name: p.full_name,
-      served: served.get(p.id) ?? 0,
-      answered: answered.get(p.id) ?? 0,
+      served: toCells(servedCells.get(p.id)),
+      answered: toCells(answeredCells.get(p.id)),
       daysSinceLast: lastServed.has(p.id)
         ? Math.floor((now - Date.parse(lastServed.get(p.id)!)) / 86_400_000)
         : null,
-      topLocation: (() => {
-        const loc = perLocation.get(p.id);
-        if (!loc) return null;
-        const best = [...loc.entries()].sort((a, b) => b[1] - a[1])[0];
-        return (locations ?? []).find((l) => l.id === best[0])?.name ?? null;
-      })(),
     }))
-    .sort(
-      (a, b) => b.served - a.served || a.name.localeCompare(b.name, df.locale),
-    );
+    .sort((a, b) => a.name.localeCompare(b.name, df.locale));
 
-  const months = [...perMonth.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([month, count]) => ({ label: df.monthLabel(month), count }));
+  const months = (schedules ?? [])
+    .map((s) => s.month)
+    .filter((month, i, all) => all.indexOf(month) === i)
+    .sort()
+    .map((month) => ({ iso: month, label: df.monthLabel(month) }));
 
-  return <StatsView rows={rows} months={months} />;
+  return (
+    <StatsView
+      rows={rows}
+      months={months}
+      locations={(locations ?? []).map((l) => ({ id: l.id, name: l.name }))}
+    />
+  );
 }

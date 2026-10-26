@@ -15,6 +15,7 @@ import { SubmitButton } from "@/components/molecules/submit-button";
 import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
 import { Badge } from "@/components/ui/badge";
+import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -38,6 +39,7 @@ const DEFAULT_COLOR = "#6366f1";
 export function LocationsPanel({ locations }: { locations: Location[] }) {
   const router = useRouter();
   const t = useTranslations("group.locations");
+  const tc = useTranslations("confirm");
   const resultError = useResultError();
   const [pending, startTransition] = React.useTransition();
 
@@ -93,15 +95,21 @@ export function LocationsPanel({ locations }: { locations: Location[] }) {
                 }
               />
               <LocationDialog location={loc} nextOrder={loc.sort_order} />
-              <Button
-                size="icon"
-                variant="ghost"
-                disabled={pending}
-                aria-label={t("delete", { name: loc.name })}
-                onClick={() => run(() => deleteLocationAction(loc.id))}
-              >
-                <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
-              </Button>
+              <ConfirmAction
+                title={tc("location.title")}
+                description={`${tc("location.body", { name: loc.name })} ${tc("cannotUndo")}`}
+                onConfirm={() => run(() => deleteLocationAction(loc.id))}
+                trigger={
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    disabled={pending}
+                    aria-label={t("delete", { name: loc.name })}
+                  >
+                    <Trash2 className="h-4 w-4 text-[color:var(--color-open)]" />
+                  </Button>
+                }
+              />
             </div>
           </React.Fragment>
         ))}

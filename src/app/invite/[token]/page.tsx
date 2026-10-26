@@ -44,7 +44,12 @@ export default async function InvitePage({
     ? await admin.from("parishes").select("name").eq("id", invite.parish_id).single()
     : { data: null };
   const { data: person } = invite?.person_id
-    ? await admin.from("people").select("full_name").eq("id", invite.person_id).single()
+    ? await admin
+        .from("people")
+        .select("full_name")
+        .eq("id", invite.person_id)
+        .eq("parish_id", invite.parish_id)
+        .maybeSingle()
     : { data: null };
 
   const supabase = await createClient();

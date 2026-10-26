@@ -10,11 +10,19 @@ import { supabasePublicKey, supabaseUrl } from "@/lib/supabase/env";
  *   /e/<token>  availability form
  *   /v/<token>  published schedule (read-only)
  *   /t/<token>  swap request
+ *   /j/<token>  join link, opened by someone who has no account yet
+ *   /invite/<token>  named invitation, same
+ *
+ * The last two are the way in. Sending them to /login first hides the group
+ * they were invited to behind a form that does not explain itself, which is
+ * exactly the moment a volunteer gives up.
  */
 const PUBLIC_PREFIXES = [
   "/e/",
   "/v/",
   "/t/",
+  "/j/",
+  "/invite/",
   "/login",
   "/signup",
   "/forgot-password",
@@ -22,9 +30,19 @@ const PUBLIC_PREFIXES = [
   "/auth/callback",
 ];
 
+/**
+ * Files the browser fetches on its own, with no cookies: the icons the
+ * manifest points at and the service worker. The matcher in proxy.ts already
+ * excludes them; this is the belt to that pair of braces, because getting it
+ * wrong silently removes the install offer rather than breaking a page.
+ */
+const PUBLIC_FILES = new Set(["/sw.js", "/icon", "/apple-icon"]);
+
 function isPublic(pathname: string) {
   return (
-    pathname === "/" || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
+    pathname === "/" ||
+    PUBLIC_FILES.has(pathname) ||
+    PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))
   );
 }
 

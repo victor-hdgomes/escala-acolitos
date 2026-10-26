@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 import { NextResponse, type NextRequest } from "next/server";
 import { getTranslations } from "next-intl/server";
 
@@ -12,6 +14,16 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const dynamic = "force-dynamic";
 
 /**
+ * Constant time, so the comparison does not leak the secret one byte at a
+ * time through how long it takes to fail.
+ */
+function matchesSecret(header: string | null, secret: string): boolean {
+  const got = Buffer.from(header ?? "", "utf8");
+  const want = Buffer.from(`Bearer ${secret}`, "utf8");
+  return got.length === want.length && timingSafeEqual(got, want);
+}
+
+/**
  * A reminder of tomorrow's Masses. Meant for Vercel Cron to run once a day in
  * the morning.
  *
@@ -24,12 +36,15 @@ export const dynamic = "force-dynamic";
  * built for the parish being processed.
  */
 export async function GET(request: NextRequest) {
+  // Fails closed. With no secret configured this used to answer anybody, and
+  // it reads every parish with the service role, so an unauthenticated caller
+  // could mail the whole installation at will.
   const secret = process.env.CRON_SECRET;
-  if (secret) {
-    const auth = request.headers.get("authorization");
-    if (auth !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+  if (!secret) {
+    return NextResponse.json({ error: "unconfigured" }, { status: 503 });
+  }
+  if (!matchesSecret(request.headers.get("authorization"), secret)) {
+    return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
   const admin = createAdminClient();

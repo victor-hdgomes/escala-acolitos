@@ -8,7 +8,9 @@ import {
   ThemeProvider,
   themeBootstrapScript,
 } from "@/components/providers/theme-provider";
+import { AnalyticsProvider } from "@/components/providers/analytics-provider";
 import { QueryProvider } from "@/components/providers/query-provider";
+import { ServiceWorkerRegistration } from "@/components/providers/service-worker";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -61,6 +63,8 @@ export default async function RootLayout({
               <TooltipProvider delayDuration={150}>
                 {children}
                 <Toaster richColors position="top-center" />
+                <ServiceWorkerRegistration />
+                <AnalyticsProvider />
               </TooltipProvider>
             </QueryProvider>
           </ThemeProvider>

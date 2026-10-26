@@ -82,7 +82,9 @@ export function AddMemberCard({ people }: { people: LinkablePerson[] }) {
     startTransition(async () => {
       const message = resultError(
         await addAccountToGroupAction({
-          userId: found.userId,
+          // The code or address, not the id: the server resolves it again so
+          // the page cannot name an account it was never given.
+          credential: query,
           role,
           personId: personId || null,
           personName: personId ? null : newName,
