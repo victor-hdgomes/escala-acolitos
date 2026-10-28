@@ -245,7 +245,7 @@ npm run dev             # development
 npm run build           # production build
 npm run typecheck       # tsc --noEmit
 npm run lint            # eslint
-npm run check:messages  # catalog parity between locales
+npm run check:messages  # catalog parity, and every key the code asks for
 npm run db:setup        # regenerate supabase/setup.sql from the migrations
 ```
 

@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
-    "check:messages": "node scripts/check-messages.mjs",
+    "check:messages": "node scripts/check-messages.mjs && node scripts/check-translation-usage.mjs",
     "db:setup": "node scripts/build-setup.mjs"
   },
   "dependencies": {
