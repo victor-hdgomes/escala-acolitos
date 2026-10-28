@@ -12,19 +12,24 @@
  */
 
 export const EVENTS = {
-  groupCreated: "group_created",
   placeAdded: "place_added",
   patternSaved: "weekly_pattern_saved",
-  scheduleCreated: "schedule_created",
   fillLinkShared: "fill_link_shared",
   schedulePublished: "schedule_published",
-  swapOpened: "swap_opened",
-  swapFilled: "swap_filled",
   joinLinkCreated: "join_link_created",
   joinLinkRedeemed: "join_link_redeemed",
   feedbackSent: "feedback_sent",
   installPrompted: "install_prompted",
 } as const;
+
+/**
+ * Three moments are deliberately absent.
+ *
+ * Opening a cover request and taking one happen on the public links, where
+ * this never loads. Creating a schedule ends in a server redirect, so the
+ * browser is gone before anything could be sent; publishing is the better
+ * signal anyway, since a schedule nobody published did not work.
+ */
 
 export type AnalyticsEvent = (typeof EVENTS)[keyof typeof EVENTS];
 

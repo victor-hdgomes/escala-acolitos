@@ -32,7 +32,9 @@ export function AnalyticsProvider({ userId }: { userId?: string | null }) {
     void import("posthog-js").then(({ default: posthog }) => {
       if (cancelled) return;
       posthog.init(key, {
-        api_host: host ?? "https://eu.i.posthog.com",
+        // PostHog's own default. Guessing the other region does not fail
+        // loudly, it just posts every event where nothing is listening.
+        api_host: host ?? "https://us.i.posthog.com",
         autocapture: false,
         disable_session_recording: true,
         capture_pageview: true,

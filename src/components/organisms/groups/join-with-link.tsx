@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { redeemJoinLinkAction } from "@/app/(app)/groups/actions";
 import { Button } from "@/components/ui/button";
 import { useResultError } from "@/hooks/use-error-message";
+import { EVENTS, track } from "@/lib/analytics";
 
 /** Spends the join link the visitor arrived on, for an account already signed in. */
 export function JoinWithLink({ token }: { token: string }) {
@@ -28,6 +29,7 @@ export function JoinWithLink({ token }: { token: string }) {
             toast.error(message);
             return;
           }
+          track(EVENTS.joinLinkRedeemed, { from: "link" });
           toast.success(t("joined"));
           router.push("/home");
         })

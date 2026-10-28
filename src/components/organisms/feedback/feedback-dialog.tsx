@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 const KINDS = ["idea", "problem", "question", "other"] as const;
@@ -41,6 +42,7 @@ export function FeedbackDialog({ className }: { className?: string }) {
 
   const { onSubmit, pending } = useFormAction(sendFeedbackAction, {
     onSuccess: () => {
+      track(EVENTS.feedbackSent);
       toast.success(t("sent"));
       setOpen(false);
     },

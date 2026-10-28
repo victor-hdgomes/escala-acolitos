@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 import { copyToClipboard, shareOrCopy, whatsAppUrl } from "@/lib/client-utils";
 import { dayKey } from "@/lib/date";
 import { novenaTitleOf } from "@/lib/schedule/generate";
@@ -93,6 +94,7 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
   return (
     <div className="space-y-4">
       <LinkCard
+        kind="fill"
         title={t("share.fillLinkTitle")}
         description={
           // In a direct-signup novena nobody marks availability: the altar
@@ -107,6 +109,7 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
 
       {published ? (
         <LinkCard
+          kind="view"
           title={t("share.viewLinkTitle")}
           description={t("share.viewLinkDescription")}
           url={viewUrl}
@@ -177,11 +180,14 @@ export function ShareTab({ detail, fillUrl, viewUrl }: ScheduleViewProps) {
 }
 
 function LinkCard({
+  kind,
   title,
   description,
   url,
   message,
 }: {
+  /** Which of the two links this is, for the one event worth counting. */
+  kind: "fill" | "view";
   title: string;
   description: string;
   url: string;
@@ -207,6 +213,7 @@ function LinkCard({
             aria-label={t("share.copyLink")}
             onClick={() => {
               void copyToClipboard(url);
+              track(EVENTS.fillLinkShared, { kind, how: "copy" });
               toast.success(t("linkCopied"));
             }}
           >
@@ -220,6 +227,7 @@ function LinkCard({
               href={whatsAppUrl(message)}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track(EVENTS.fillLinkShared, { kind, how: "whatsapp" })}
             >
               <MessageCircle className="h-4 w-4" />
               {t("share.sendOnWhatsApp")}
@@ -230,6 +238,7 @@ function LinkCard({
             variant="outline"
             onClick={async () => {
               const r = await shareOrCopy(title, message);
+              if (r !== "cancelled") track(EVENTS.fillLinkShared, { kind, how: r });
               if (r === "copied") toast.success(t("messageCopied"));
             }}
           >

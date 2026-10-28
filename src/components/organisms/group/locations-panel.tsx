@@ -14,6 +14,7 @@ import {
 import { SubmitButton } from "@/components/molecules/submit-button";
 import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmAction } from "@/components/molecules/confirm-action";
 import { Button } from "@/components/ui/button";
@@ -131,6 +132,7 @@ function LocationDialog({
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(saveLocationAction, {
     onSuccess: () => {
+      track(EVENTS.placeAdded, { from: "group" });
       setOpen(false);
       router.refresh();
     },

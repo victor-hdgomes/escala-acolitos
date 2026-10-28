@@ -23,6 +23,7 @@ import {
 } from "@/components/molecules/scroll-tabs";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { useResultError } from "@/hooks/use-error-message";
+import { EVENTS, track } from "@/lib/analytics";
 import type { LocationLite, PersonLite, ScheduleDetail } from "@/lib/schedule/types";
 import type { PersonStats } from "@/lib/schedule/suggest";
 
@@ -63,9 +64,9 @@ export function ScheduleDetailView(props: ScheduleViewProps) {
         toast.error(message);
         return;
       }
-      toast.success(
-        t("detail.published", { count: res.ok ? (res.data?.notified ?? 0) : 0 }),
-      );
+      const notified = res.ok ? (res.data?.notified ?? 0) : 0;
+      track(EVENTS.schedulePublished, { notified });
+      toast.success(t("detail.published", { count: notified }));
       router.refresh();
     });
 

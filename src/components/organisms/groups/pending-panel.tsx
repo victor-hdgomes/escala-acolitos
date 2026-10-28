@@ -20,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useResultError } from "@/hooks/use-error-message";
+import { EVENTS, track } from "@/lib/analytics";
 
 /**
  * The last segment of whatever was pasted.
@@ -75,6 +76,7 @@ export function PendingPanel({
         toast.error(message);
         return;
       }
+      track(EVENTS.joinLinkRedeemed, { from: "pending" });
       toast.success(t("joined"));
       router.push("/home");
     });

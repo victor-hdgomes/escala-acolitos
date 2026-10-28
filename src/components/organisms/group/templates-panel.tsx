@@ -19,6 +19,7 @@ import {
 } from "@/components/providers/timezone-provider";
 import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -189,6 +190,7 @@ function TemplateDialog({
   const [open, setOpen] = React.useState(false);
   const { onSubmit, pending } = useFormAction(saveTemplateAction, {
     onSuccess: () => {
+      track(EVENTS.patternSaved);
       setOpen(false);
       router.refresh();
     },

@@ -28,6 +28,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useResultError } from "@/hooks/use-error-message";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 import { appUrlClient, copyToClipboard } from "@/lib/client-utils";
 import type { JoinLink, Role } from "@/lib/db/types";
 import { isPast } from "@/lib/now";
@@ -54,6 +55,7 @@ export function JoinLinksCard({ links }: { links: JoinLink[] }) {
   const { onSubmit, pending: creating } = useFormAction(createJoinLinkAction, {
     onSuccess: (data) => {
       if (data?.url) void copyToClipboard(data.url);
+      track(EVENTS.joinLinkCreated);
       toast.success(t("created"));
       router.refresh();
     },

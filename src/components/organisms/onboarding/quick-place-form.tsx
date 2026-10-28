@@ -10,6 +10,7 @@ import { SubmitButton } from "@/components/molecules/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useFormAction } from "@/hooks/use-form-action";
+import { EVENTS, track } from "@/lib/analytics";
 
 /**
  * One field, one button: the name of a church, and it exists.
@@ -35,6 +36,7 @@ export function QuickPlaceForm({
 
   const { onSubmit, pending } = useFormAction(saveLocationAction, {
     onSuccess: () => {
+      track(EVENTS.placeAdded, { from: "guide" });
       toast.success(t("created"));
       router.refresh();
       onCreated?.();

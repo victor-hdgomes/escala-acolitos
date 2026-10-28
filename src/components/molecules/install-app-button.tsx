@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Smartphone } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { EVENTS, track } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 /**
@@ -79,7 +80,8 @@ export function InstallAppButton({
   async function install() {
     if (!prompt) return;
     await prompt.prompt();
-    await prompt.userChoice;
+    const { outcome } = await prompt.userChoice;
+    track(EVENTS.installPrompted, { accepted: outcome === "accepted" });
     // The event is single use. If the browser still considers the app
     // installable it fires a fresh one, which brings the button back.
     setPrompt(null);
